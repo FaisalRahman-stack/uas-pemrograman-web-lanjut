@@ -12,8 +12,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\Role::create(['role_name' => 'admin']);
-        \App\Models\Role::create(['role_name' => 'customer']);
+        $admin = \App\Models\Role::create(['role_name' => 'admin']);
+        $customer = \App\Models\Role::create(['role_name' => 'customer']);
+
+        \App\Models\User::create([
+            'name' => 'Faisal',
+            'email' => 'Faisal@gmail.com',
+            'password' => bcrypt('pw12345'),
+            'role_id' => $customer->id 
+        ]);
 
         $suv = \App\Models\VehicleType::create(['type_name' => 'SUV']);
         $sedan = \App\Models\VehicleType::create(['type_name' => 'Sedan']);
