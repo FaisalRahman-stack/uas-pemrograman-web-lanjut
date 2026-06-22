@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRentalStore } from '../store/useRentalStore'; 
+import apiClient from '../api/apiClient';
 
 function Login() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const loginStore = useRentalStore((state) => state.login);
 
-    const handleLoginSubmit = (e) => {
+    const handleLoginSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
         
-        if (username === 'admin' && password === 'admin123') {
-            loginStore({ username: 'admin', role: 'admin' }, 'dummy-token-admin'); 
-            alert('Login Berhasil sebagai Admin!');
-            navigate('/dashboard');
-        } else if (username === 'user' && password === 'user123') {
-            loginStore({ username: 'user', role: 'user' }, 'dummy-token-user'); 
+        try {
+            const response = await apiClient.post('/auth/login', {
+                email: username.trim(),
+                password: password
+            });
+            const { user, token } = response.data;
+            loginStore(user, token); 
             alert('Login Berhasil!');
             navigate('/dashboard');
-        } else {
-            alert('Username atau password salah!');
+
+        } catch (error) {
+            const pesanError = error.response?.data?.message || 'Username atau password salah, atau Server mati!';
+            alert(pesanError);
+            console.error("Login Error:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -55,8 +64,22 @@ function Login() {
                     />
                 </div>
 
-                <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-                    Masuk Sekarang
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    style={{ 
+                        width: '100%', 
+                        padding: '12px', 
+                        backgroundColor: isLoading ? '#6c757d' : '#007bff', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        cursor: isLoading ? 'wait' : 'pointer', 
+                        fontWeight: 'bold', 
+                        fontSize: '16px' 
+                    }}
+                >
+                    {isLoading ? 'Memproses...' : 'Masuk Sekarang'}
                 </button>
             </form>
         </div>
