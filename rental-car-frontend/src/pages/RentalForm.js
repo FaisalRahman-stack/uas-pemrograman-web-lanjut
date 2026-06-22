@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useRentalStore } from '../store/useRentalStore';
 
 function RentalForm() {
-    const { id } = useParams(); // Mengambil ID mobil dari URL (misal: /rental/1)
+    const { id } = useParams(); 
     const navigate = useNavigate();
-
-    // State untuk form transaksi sesuai spesifikasi tugas
+    const user = useRentalStore((state) => state.user);
+    const addTransaction = useRentalStore((state) => state.addTransaction);
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
     const [durasi, setDurasi] = useState(0);
-    const hargaPerHari = 350000; // Harga sementara sebelum dihubungkan ke database
-
-    // Fungsi otomatis menghitung selisih hari sewa
+    const hargaPerHari = 350000; 
+    const totalBiaya = durasi * hargaPerHari;
     const hitungTotalBiaya = (mulai, selesai) => {
         if (mulai && selesai) {
             const tgl1 = new Date(mulai);
@@ -34,17 +34,29 @@ function RentalForm() {
             return;
         }
 
-        // Simulasi sukses input data transaksi
-        alert(`Transaksi Berhasil Disimpan!\nID Mobil: ${id}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${(durasi * hargaPerHari).toLocaleString()}`);
+        const transaksiBaru = {
+            idTransaksi: `TRX-${new Date().getTime()}`,
+            mobilId: id,
+            penyewa: user ? user.username : 'Guest',
+            tanggalMulai,
+            tanggalSelesai,
+            durasi,
+            totalBiaya,
+            status: 'Menunggu Pembayaran'
+        };
+
+        addTransaction(transaksiBaru);
+
+        alert(`Transaksi Berhasil Disimpan!\nID Mobil: ${id}\nPenyewa: ${transaksiBaru.penyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString()}`);
         
-        // Nanti setelah sukses, arahkan kembali atau ke halaman riwayat
-        // navigate('/dashboard'); 
+        navigate('/dashboard'); 
     };
 
     return (
         <div style={{ maxWidth: '500px', margin: '40px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
             <h2>Formulir Penyewaan Kendaraan</h2>
             <p>ID Mobil yang dipilih: <strong>{id}</strong></p>
+            {user && <p>Nama Penyewa: <strong>{user.username}</strong></p>}
             <p>Tarif Sewa: Rp {hargaPerHari.toLocaleString()} / hari</p>
             <hr />
             
@@ -73,7 +85,7 @@ function RentalForm() {
                 
                 <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '4px', marginBottom: '15px' }}>
                     <p style={{ margin: '5px 0' }}>Durasi: <strong>{durasi} Hari</strong></p>
-                    <h3 style={{ margin: '5px 0' }}>Total Biaya: Rp {(durasi * hargaPerHari).toLocaleString()}</h3>
+                    <h3 style={{ margin: '5px 0' }}>Total Biaya: Rp {totalBiaya.toLocaleString()}</h3>
                 </div>
                 
                 <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>

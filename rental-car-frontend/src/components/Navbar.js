@@ -1,10 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRentalStore } from '../store/useRentalStore'; 
 
 function Navbar() {
     const navigate = useNavigate();
+    const logout = useRentalStore((state) => state.logout);
 
     const handleLogoutClick = () => {
+        logout();
         alert('Anda telah keluar dari sistem.');
         navigate('/');
     };
@@ -27,7 +30,7 @@ function Navbar() {
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <span 
                     onClick={() => navigate('/dashboard')} 
-                    style={{ cursor: 'pointer', fontSize: '14px', hover: { color: '#007bff' } }}
+                    style={{ cursor: 'pointer', fontSize: '14px' }}
                 >
                     Katalog
                 </span>

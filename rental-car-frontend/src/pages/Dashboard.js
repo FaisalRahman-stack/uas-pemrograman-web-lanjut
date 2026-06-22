@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRentalStore } from '../store/useRentalStore'; 
 import imgAvanza from '../assets/avanza.jpg';
 import imgCivic from '../assets/civic.jpg';
 import imgPajero from '../assets/pajero.jpg';
@@ -17,7 +18,8 @@ function Dashboard() {
     const navigate = useNavigate();
     const [halamanAktif, setHalamanAktif] = useState(1);
     const itemPerHalaman = 6;
-
+    const cars = useRentalStore((state) => state.cars);
+    const setCars = useRentalStore((state) => state.setCars);
     const dataMobilTiruan = [
         { id: 101, nama: 'Toyota Avanza', tipe: 'MPV', harga: 350000, status: 'Tersedia', gambar: imgAvanza, spek: '1500cc | Manual | 7 Kursi', Deskripsi: 'Sangat cocok untuk perjalanan keluarga besar atau logistik kelompok.' },
         { id: 102, nama: 'Honda Civic', tipe: 'Sedan', harga: 700000, status: 'Tersedia', gambar: imgCivic, spek: '1500cc Turbo | Otomatis | 5 Kursi', Deskripsi: 'Cocok untuk kebutuhan kasual, menghadiri rapat formal, atau berkendara santai di dalam kota.' },
@@ -32,11 +34,16 @@ function Dashboard() {
         { id: 111, nama: 'Hyundai Creta', tipe: 'SUV', harga: 500000, status: 'Dipinjam', gambar: imgCreta, spek: '1500cc | IVT | 5 Kursi', Deskripsi: 'Dilengkapi panoramic sunroof dan fitur keamanan berkendara yang sangat modern.' },
         { id: 112, nama: 'Mitsubishi Xpander', tipe: 'MPV', harga: 400000, status: 'Tersedia', gambar: imgXpander, spek: '1500cc | Otomatis | 7 Kursi', Deskripsi: 'Kombinasi ketangguhan SUV dan kenyamanan MPV untuk liburan keluarga.' }
     ];
-
+    useEffect(() => {
+        if (cars.length === 0) {
+            setCars(dataMobilTiruan);
+        }
+    }, [cars.length, setCars]);
+    const dataYangDitampilkan = cars.length > 0 ? cars : dataMobilTiruan;
     const indeksTerakhir = halamanAktif * itemPerHalaman;
     const indeksPertama = indeksTerakhir - itemPerHalaman;
-    const mobilTampil = dataMobilTiruan.slice(indeksPertama, indeksTerakhir);
-    const totalHalaman = Math.ceil(dataMobilTiruan.length / itemPerHalaman);
+    const mobilTampil = dataYangDitampilkan.slice(indeksPertama, indeksTerakhir);
+    const totalHalaman = Math.ceil(dataYangDitampilkan.length / itemPerHalaman);
 
     return (
         <div style={{ maxWidth: '1000px', margin: '30px auto', padding: '0 20px' }}>
@@ -62,35 +69,17 @@ function Dashboard() {
                                 <span style={{ fontSize: '13px', color: '#888' }}>Tarif Sewa:</span>
                                 <h4 style={{ margin: '2px 0 0 0', color: '#28a745', fontSize: '18px' }}>Rp {mobil.harga.toLocaleString()} <span style={{ fontSize: '12px', color: '#666' }}>/ hari</span></h4>
                             </div>
-                            <div style={{ 
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginTop: '10px' // memberi jarak tambahan dari harga sewa
-}}>
-    <span style={{ 
-        color: mobil.status === 'Tersedia' ? '#28a745' : '#dc3545',
-        fontWeight: 'bold',
-        fontSize: '14px'
-    }}>{mobil.status}</span>
-    
-    <button 
-        disabled={mobil.status === 'Dipinjam'}
-        onClick={() => navigate(`/rental/${mobil.id}`)}
-        style={{ 
-            padding: '8px 16px', 
-            backgroundColor: mobil.status === 'Tersedia' ? '#007bff' : '#6c757d', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '6px', 
-            cursor: mobil.status === 'Tersedia' ? 'pointer' : 'not-allowed',
-            fontWeight: 'bold',
-            marginLeft: '20px' 
-        }}
-    >
-        {mobil.status === 'Tersedia' ? 'Sewa Mobil' : 'Habis'}
-    </button>
-</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                                <span style={{ color: mobil.status === 'Tersedia' ? '#28a745' : '#dc3545', fontWeight: 'bold', fontSize: '14px' }}>{mobil.status}</span>
+                                
+                                <button 
+                                    disabled={mobil.status === 'Dipinjam'}
+                                    onClick={() => navigate(`/rental/${mobil.id}`)}
+                                    style={{ padding: '8px 16px', backgroundColor: mobil.status === 'Tersedia' ? '#007bff' : '#6c757d', color: '#fff', border: 'none', borderRadius: '6px', cursor: mobil.status === 'Tersedia' ? 'pointer' : 'not-allowed', fontWeight: 'bold', marginLeft: '20px' }}
+                                >
+                                    {mobil.status === 'Tersedia' ? 'Sewa Mobil' : 'Habis'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}

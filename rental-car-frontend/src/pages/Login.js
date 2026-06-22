@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRentalStore } from '../store/useRentalStore'; 
 
 function Login() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
+    const loginStore = useRentalStore((state) => state.login);
+
     const handleLoginSubmit = (e) => {
         e.preventDefault();
         
         if (username === 'admin' && password === 'admin123') {
+            loginStore({ username: 'admin', role: 'admin' }, 'dummy-token-admin'); 
             alert('Login Berhasil sebagai Admin!');
             navigate('/dashboard');
         } else if (username === 'user' && password === 'user123') {
+            loginStore({ username: 'user', role: 'user' }, 'dummy-token-user'); 
             alert('Login Berhasil!');
             navigate('/dashboard');
         } else {
