@@ -22,8 +22,17 @@ class DatabaseSeeder extends Seeder
             'role_id' => $customer->id 
         ]);
 
+        \App\Models\User::create([
+            'name' => 'Super Admin',
+            'email' => 'admin@gmail.com',
+            'password' => bcrypt('pw12345'),
+            'role_id' => $admin->id 
+        ]);
+
         $suv = \App\Models\VehicleType::create(['type_name' => 'SUV']);
         $sedan = \App\Models\VehicleType::create(['type_name' => 'Sedan']);
+        $mpv = \App\Models\VehicleType::create(['type_name' => 'MPV']); 
+        $hatch = \App\Models\VehicleType::create(['type_name' => 'Hatchback']);
 
         \App\Models\Vehicle::create([
             'vehicle_type_id' => $suv->id,

@@ -20,11 +20,11 @@ class Rental extends Model
 
     public function user()
     {
-        return $table->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function vehicle()
     {
-        return $table->belongsTo(Vehicle::class, 'vehicle_id');
+        return $this->belongsTo(Vehicle::class, 'vehicle_id');
     }
 }
