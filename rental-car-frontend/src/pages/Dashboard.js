@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useRentalStore } from '../store/useRentalStore'; 
 import apiClient from '../api/apiClient';
 import { dummyCars, getCarImage } from '../data/dummyCars';
@@ -23,51 +24,50 @@ const getDeskripsiFungsional = (nama = '', tipe = '') => {
 function Dashboard() {
     const navigate = useNavigate();
     const [halamanAktif, setHalamanAktif] = useState(1);
-    const [loadingData, setLoadingData] = useState(true);
     const itemPerHalaman = 6;
 
     const cars = useRentalStore((state) => state.cars);
     const setCars = useRentalStore((state) => state.setCars);
 
+    const { data: queryData, isLoading: loadingData, isError } = useQuery({
+        queryKey: ['vehicles_catalog'],
+        queryFn: async () => {
+            const response = await apiClient.get('/vehicles'); 
+            const dataYangBenar = response.data.data ? response.data.data : response.data;
+            
+            const formattedData = Array.isArray(dataYangBenar) ? dataYangBenar.map((item) => {
+                const namaMobil = item.nama || item.name || 'Nama Tidak Diketahui';
+                const tipeMobil = item.tipe || item.vehicle_type?.type_name || item.vehicleType?.type_name || 'Unknown';
+                
+                const rawStatus = item.status ? item.status.toString().toLowerCase() : '';
+                const statusMapped = rawStatus === 'available' ? 'Tersedia' : (rawStatus === 'rented' ? 'Dipinjam' : 'Tidak tersedia');
+
+                return {
+                    id: item.id,
+                    nama: namaMobil,
+                    tipe: tipeMobil,
+                    harga: item.harga || item.price_per_day || 0,
+                    status: statusMapped,
+                    gambar: getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
+                    spek: item.spek || `Plat: ${item.plate_number || '-'}`,
+                    Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
+                };
+            }) : dummyCars;
+
+            return formattedData;
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+
     useEffect(() => {
-        const fetchMobil = async () => {
-            try {
-                setLoadingData(true);
-                const response = await apiClient.get('/vehicles'); 
-                const dataYangBenar = response.data.data ? response.data.data : response.data;
-                const formattedData = Array.isArray(dataYangBenar) ? dataYangBenar.map((item) => {
-                    const namaMobil = item.nama || item.name || 'Nama Tidak Diketahui';
-                    
-                    const tipeMobil = item.tipe || item.vehicle_type?.type_name || item.vehicleType?.type_name || 'Unknown';
-                    
-                    const rawStatus = item.status ? item.status.toString().toLowerCase() : '';
-                    const statusMapped = rawStatus === 'available' ? 'Tersedia' : (rawStatus === 'rented' ? 'Dipinjam' : 'Tidak tersedia');
-
-                    return {
-                        id: item.id,
-                        nama: namaMobil,
-                        tipe: tipeMobil,
-                        harga: item.harga || item.price_per_day || 0,
-                        status: statusMapped,
-                        gambar: getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
-                        spek: item.spek || `Plat: ${item.plate_number || '-'}`,
-                        Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
-                    };
-                }) : dummyCars;
-
-                console.log("Isi data dari Laravel:", formattedData);
-                setCars(formattedData.length ? formattedData : dummyCars);
-            } catch (error) {
-                const serverMessage = error.response && error.response.data ? error.response.data : error.message;
-                console.error("Gagal menarik data dari Backend:", serverMessage);
-                setCars(dummyCars);
-            } finally {
-                setLoadingData(false);
-            }
-        };
-
-        fetchMobil();
-    }, [setCars]);
+        if (queryData) {
+            console.log("Data Katalog dari Cache/Server:", queryData);
+            setCars(queryData.length ? queryData : dummyCars);
+        } else if (isError) {
+            console.error("Gagal menarik data dari Backend.");
+            setCars(dummyCars);
+        }
+    }, [queryData, isError, setCars]);
 
     const indeksTerakhir = halamanAktif * itemPerHalaman;
     const indeksPertama = indeksTerakhir - itemPerHalaman;
@@ -77,7 +77,7 @@ function Dashboard() {
     if (loadingData) {
         return (
             <div style={{ textAlign: 'center', marginTop: '100px', fontSize: '18px', color: '#666' }}>
-                Sedang memuat data dari server...
+                Sedang memuat data dari memori cache/server...
             </div>
         );
     }
@@ -111,7 +111,7 @@ function Dashboard() {
                                 <div style={{ margin: '10px 0 15px 0' }}>
                                     <span style={{ fontSize: '13px', color: '#888' }}>Tarif Sewa:</span>
                                     <h4 style={{ margin: '2px 0 0 0', color: '#28a745', fontSize: '18px' }}>
-                                        Rp {Number(mobil.harga).toLocaleString()} <span style={{ fontSize: '12px', color: '#666' }}>/ hari</span>
+                                        Rp {Number(mobil.harga).toLocaleString('id-ID')} <span style={{ fontSize: '12px', color: '#666' }}>/ hari</span>
                                     </h4>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>

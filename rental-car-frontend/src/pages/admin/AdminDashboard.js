@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
 import apiClient from '../../api/apiClient';
 import AdminSidebar from '../../components/AdminSidebar';
@@ -7,59 +8,55 @@ import AdminSidebar from '../../components/AdminSidebar';
 function AdminDashboard() {
     const navigate = useNavigate();
     const user = useRentalStore((state) => state.user);
-    const [vehicles, setVehicles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const queryClient = useQueryClient(); 
 
     const isAdmin = user?.role_id === 1 || user?.role?.role_name?.toLowerCase() === 'admin';
 
     useEffect(() => {
         if (!isAdmin) {
             navigate('/');
-            return;
         }
-        fetchVehicles();
     }, [isAdmin, navigate]);
 
-    const fetchVehicles = async () => {
-        try {
-            setLoading(true);
+    const { data: vehicles = [], isLoading: loading, isError: error } = useQuery({
+        queryKey: ['vehicles_catalog'],
+        queryFn: async () => {
             const response = await apiClient.get('/vehicles');
             const data = response.data.data || response.data;
-            setVehicles(Array.isArray(data) ? data : []);
-            setError(null);
-        } catch (err) {
-            console.error('Gagal memuat kendaraan:', err);
-            setError('Tidak dapat memuat daftar kendaraan.');
-            setVehicles([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+            return Array.isArray(data) ? data : [];
+        },
+        enabled: isAdmin,
+    });
 
-    const handleDelete = async (vehicleId) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus kendaraan ini?')) {
-            return;
-        }
-
-        try {
+    const deleteMutation = useMutation({
+        mutationFn: async (vehicleId) => {
             const token = localStorage.getItem('access_token');
-            
-            await apiClient.delete(`/vehicles/${vehicleId}`, {
+            return await apiClient.delete(`/vehicles/${vehicleId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
+        },
+        onSuccess: () => {
             alert('Kendaraan berhasil dihapus');
-            fetchVehicles();
-        } catch (err) {
+            queryClient.invalidateQueries({ queryKey: ['vehicles_catalog'] });
+        },
+        onError: (err) => {
             console.error('Gagal menghapus kendaraan:', err);
             alert('Gagal menghapus kendaraan');
+        }
+    });
+
+    const handleDelete = (vehicleId) => {
+        if (window.confirm('Apakah Anda yakin ingin menghapus kendaraan ini?')) {
+            deleteMutation.mutate(vehicleId);
         }
     };
 
     const availableCount = vehicles.filter((v) => v.status?.toLowerCase() === 'available').length;
     const rentedCount = vehicles.filter((v) => v.status?.toLowerCase() !== 'available').length;
+
+    if (!isAdmin) return null;
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -106,8 +103,8 @@ function AdminDashboard() {
                         </button>
                     </div>
 
-                    {loading && <p style={{ color: '#666' }}>Memuat data...</p>}
-                    {error && <p style={{ color: '#dc3545' }}>{error}</p>}
+                    {loading && <p style={{ color: '#666' }}>Memuat data armada...</p>}
+                    {error && <p style={{ color: '#dc3545' }}>Tidak dapat memuat daftar kendaraan.</p>}
                     
                     {!loading && !error && vehicles.length === 0 && (
                         <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>Belum ada kendaraan terdaftar.</p>
@@ -165,17 +162,18 @@ function AdminDashboard() {
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(vehicle.id)}
+                                                    disabled={deleteMutation.isPending}
                                                     style={{
                                                         padding: '6px 12px',
-                                                        backgroundColor: '#dc3545',
+                                                        backgroundColor: deleteMutation.isPending ? '#6c757d' : '#dc3545',
                                                         color: '#fff',
                                                         border: 'none',
                                                         borderRadius: '4px',
-                                                        cursor: 'pointer',
+                                                        cursor: deleteMutation.isPending ? 'wait' : 'pointer',
                                                         fontSize: '12px'
                                                     }}
                                                 >
-                                                    Hapus
+                                                    {deleteMutation.isPending && deleteMutation.variables === vehicle.id ? 'Menghapus...' : 'Hapus'}
                                                 </button>
                                             </td>
                                         </tr>

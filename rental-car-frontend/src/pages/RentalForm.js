@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../store/useRentalStore';
 import apiClient from '../api/apiClient';
 import { dummyCars, getCarImage } from '../data/dummyCars';
@@ -37,61 +38,44 @@ const getSpesifikasiLengkap = (nama = '', plat = '-') => {
 function RentalForm() {
     const { id } = useParams(); 
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    
     const cars = useRentalStore((state) => state.cars);
     const user = useRentalStore((state) => state.user);
     const addTransaction = useRentalStore((state) => state.addTransaction);
+    
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
     const [durasi, setDurasi] = useState(0);
-    const [detailCar, setDetailCar] = useState(null);
-    const [loadingCar, setLoadingCar] = useState(false);
 
-    useEffect(() => {
-        const loadVehicleDetail = async () => {
-            if (!id) return;
-
+    const { data: detailCar, isLoading: loadingCar } = useQuery({
+        queryKey: ['vehicle_detail', id],
+        queryFn: async () => {
             const existingCar = cars.find((car) => car.id.toString() === id);
-            if (existingCar) {
-                setDetailCar(null);
-                return;
-            }
+            if (existingCar) return existingCar;
 
-            setLoadingCar(true);
-            try {
-                const response = await apiClient.get(`/vehicles/${id}`);
-                const apiData = response.data.data || response.data;
-                const namaMobil = apiData.nama || apiData.name || 'Tidak Diketahui';
-                const tipeMobil = apiData.tipe || apiData.vehicleType?.type_name || 'Unknown';
-                const platNomor = apiData.plate_number || '-';
-                setDetailCar({
-                    id: apiData.id,
-                    nama: namaMobil,
-                    tipe: tipeMobil,
-                    harga: apiData.harga || apiData.price_per_day || 350000,
-                    status: apiData.status && apiData.status.toString().toLowerCase() === 'available' ? 'Tersedia' : apiData.status || 'Tidak Tersedia',
-                    gambar: getCarImage(namaMobil) || apiData.gambar || dummyCars[0]?.gambar,
-                    spek: getSpesifikasiLengkap(namaMobil, platNomor),
-                    Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
-                });
-            } catch (error) {
-                console.error('Gagal mengambil detail kendaraan:', error.response?.data || error.message || error);
-                setDetailCar(null);
-            } finally {
-                setLoadingCar(false);
-            }
-        };
+            const response = await apiClient.get(`/vehicles/${id}`);
+            const apiData = response.data.data || response.data;
+            const namaMobil = apiData.nama || apiData.name || 'Tidak Diketahui';
+            const tipeMobil = apiData.tipe || apiData.vehicleType?.type_name || 'Unknown';
+            const platNomor = apiData.plate_number || '-';
+            
+            return {
+                id: apiData.id,
+                nama: namaMobil,
+                tipe: tipeMobil,
+                harga: apiData.harga || apiData.price_per_day || 350000,
+                status: apiData.status && apiData.status.toString().toLowerCase() === 'available' ? 'Tersedia' : apiData.status || 'Tidak Tersedia',
+                gambar: getCarImage(namaMobil) || apiData.gambar || dummyCars[0]?.gambar,
+                spek: getSpesifikasiLengkap(namaMobil, platNomor),
+                Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
+            };
+        },
+        staleTime: 1000 * 60 * 5,
+    });
 
-        loadVehicleDetail();
-    }, [id, cars]);
-
-    const baseCar = detailCar || cars.find((car) => car.id.toString() === id) || dummyCars.find((car) => car.id.toString() === id) || {
-        nama: 'Tidak Diketahui',
-        tipe: 'Unknown',
-        harga: 350000,
-        status: 'Tidak Tersedia',
-        gambar: dummyCars[0]?.gambar,
-        spek: 'Plat: -',
-        Deskripsi: 'Detail kendaraan tidak tersedia.',
+    const baseCar = detailCar || dummyCars.find((car) => car.id.toString() === id) || {
+        nama: 'Sedang Memuat...', tipe: 'Unknown', harga: 0, status: 'Memuat...', gambar: dummyCars[0]?.gambar, spek: 'Plat: -', Deskripsi: 'Memuat detail...',
     };
 
     const getPlateFromSpek = (spek = '') => {
@@ -113,65 +97,66 @@ function RentalForm() {
         if (mulai && selesai) {
             const tgl1 = new Date(mulai);
             const tgl2 = new Date(selesai);
-            const selisihWaktu = tgl2.getTime() - tgl1.getTime();
-            const selisihHari = Math.ceil(selisihWaktu / (1000 * 3600 * 24));
-            
-            if (selisihHari > 0) {
-                setDurasi(selisihHari);
-            } else {
-                setDurasi(0);
-            }
+            const selisihHari = Math.ceil((tgl2.getTime() - tgl1.getTime()) / (1000 * 3600 * 24));
+            setDurasi(selisihHari > 0 ? selisihHari : 0);
         }
     };
 
-    const handleSubmitTransaksi = async (e) => {
+    const rentMutation = useMutation({
+        mutationFn: async (payload) => {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            return await apiClient.post('/rentals', payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        },
+        onSuccess: (data) => {
+            const namaPenyewa = user ? user.name || user.username : 'Pelanggan';
+            
+            addTransaction({
+                idTransaksi: `TRX-${new Date().getTime()}`,
+                mobilId: id,
+                penyewa: namaPenyewa,
+                tanggalMulai,
+                tanggalSelesai,
+                durasi,
+                totalBiaya,
+                status: 'Menunggu Pembayaran'
+            });
+
+            alert(`Transaksi Berhasil Disimpan!\nID Mobil: ${id}\nPenyewa: ${namaPenyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString('id-ID')}`);
+            
+            queryClient.invalidateQueries({ queryKey: ['vehicles_catalog'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions_list'] });
+            
+            navigate('/dashboard'); 
+        },
+        onError: (error) => {
+            console.error("Gagal menyimpan transaksi ke database:", error);
+            alert(error.response?.data?.message || 'Gagal terhubung ke server. Pastikan Anda sudah login akun dengan benar!');
+        }
+    });
+
+    const handleSubmitTransaksi = (e) => {
         e.preventDefault();
         if (durasi <= 0) {
             alert('Tanggal selesai harus setelah tanggal mulai sewa!');
             return;
         }
 
-        try {
-            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const payload = {
+            user_id: user?.id || 1,
+            vehicle_id: id,
+            start_date: tanggalMulai,
+            end_date: tanggalSelesai,
+            total_price: totalBiaya
+        };
 
-            const payload = {
-                user_id: user?.id || 1,
-                vehicle_id: id,
-                start_date: tanggalMulai,
-                end_date: tanggalSelesai,
-                total_price: totalBiaya
-            };
-
-            const response = await apiClient.post('/rentals', payload, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-
-            if (response.data.success || response.status === 201) {
-                const namaPenyewa = user ? user.name || user.username : 'Faisal';
-                
-                addTransaction({
-                    idTransaksi: `TRX-${new Date().getTime()}`,
-                    mobilId: id,
-                    penyewa: namaPenyewa,
-                    tanggalMulai,
-                    tanggalSelesai,
-                    durasi,
-                    totalBiaya,
-                    status: 'Menunggu Pembayaran'
-                });
-
-                alert(`Transaksi Berhasil Disimpan ke Database!\nID Mobil: ${id}\nPenyewa: ${namaPenyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString()}`);
-                
-                navigate('/dashboard'); 
-            }
-        } catch (error) {
-            console.error("Gagal menyimpan transaksi ke database:", error);
-            const pesanError = error.response?.data?.message || 'Gagal terhubung ke server. Pastikan Anda sudah login akun dengan benar!';
-            alert(pesanError);
-        }
+        rentMutation.mutate(payload);
     };
+
+    if (loadingCar) {
+        return <div style={{ textAlign: 'center', marginTop: '100px', fontSize: '18px', color: '#666' }}>Sedang memuat data kendaraan...</div>;
+    }
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#fff' }}>
@@ -185,7 +170,7 @@ function RentalForm() {
                     <p style={{ margin: '10px 0', fontWeight: 'bold' }}>{finalSelectedCar.Deskripsi}</p>
                     <p style={{ margin: '5px 0' }}><strong>Status:</strong> {finalSelectedCar.status}</p>
                     <p style={{ margin: '5px 0' }}><strong>Spesifikasi:</strong> {finalSelectedCar.spek}</p>
-                    <p style={{ margin: '10px 0', fontSize: '18px', color: '#28a745' }}>Tarif Sewa: Rp {hargaPerHari.toLocaleString()} / hari</p>
+                    <p style={{ margin: '10px 0', fontSize: '18px', color: '#28a745' }}>Tarif Sewa: Rp {hargaPerHari.toLocaleString('id-ID')} / hari</p>
                 </div>
             </div>
 
@@ -193,7 +178,7 @@ function RentalForm() {
                 <h2>Formulir Penyewaan Kendaraan</h2>
                 <p>ID Mobil yang dipilih: <strong>{id}</strong></p>
                 {user && <p>Nama Penyewa: <strong>{user.name || user.username}</strong></p>}
-                <p>Tarif Sewa: Rp {hargaPerHari.toLocaleString()} / hari</p>
+                <p>Tarif Sewa: Rp {hargaPerHari.toLocaleString('id-ID')} / hari</p>
                 <hr />
             
             <form onSubmit={handleSubmitTransaksi}>
@@ -221,11 +206,11 @@ function RentalForm() {
                 
                 <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '4px', marginBottom: '15px' }}>
                     <p style={{ margin: '5px 0' }}>Durasi: <strong>{durasi} Hari</strong></p>
-                    <h3 style={{ margin: '5px 0' }}>Total Biaya: Rp {totalBiaya.toLocaleString()}</h3>
+                    <h3 style={{ margin: '5px 0' }}>Total Biaya: Rp {totalBiaya.toLocaleString('id-ID')}</h3>
                 </div>
                 
-                <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    Konfirmasi Sewa Mobil
+                <button type="submit" disabled={rentMutation.isPending} style={{ width: '100%', padding: '10px', backgroundColor: rentMutation.isPending ? '#6c757d' : '#28a745', color: '#fff', border: 'none', borderRadius: '4px', cursor: rentMutation.isPending ? 'wait' : 'pointer' }}>
+                    {rentMutation.isPending ? 'Memproses Transaksi...' : 'Konfirmasi Sewa Mobil'}
                 </button>
             </form>
             </div>

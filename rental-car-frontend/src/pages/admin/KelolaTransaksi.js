@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
 import apiClient from '../../api/apiClient';
 import AdminSidebar from '../../components/AdminSidebar';
@@ -7,62 +8,49 @@ import AdminSidebar from '../../components/AdminSidebar';
 function KelolaTransaksi() {
     const navigate = useNavigate();
     const user = useRentalStore((state) => state.user);
-    const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const queryClient = useQueryClient();
 
     const isAdmin = user?.role_id === 1 || user?.role?.role_name?.toLowerCase() === 'admin';
 
     useEffect(() => {
         if (!isAdmin) {
             navigate('/');
-            return;
         }
-        fetchTransactions();
     }, [isAdmin, navigate]);
 
-    const fetchTransactions = async () => {
-        try {
-            setLoading(true);
-            
+    const { data: transactions = [], isLoading: loading, isError: error } = useQuery({
+        queryKey: ['transactions_list'],
+        queryFn: async () => {
             const token = localStorage.getItem('access_token');
-
             const response = await apiClient.get('/rentals', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` }
             });
-
             const data = response.data.data || response.data;
-            setTransactions(Array.isArray(data) ? data : []);
-            setError(null);
-        } catch (err) {
-            console.error('Gagal memuat transaksi:', err);
-            setError('Tidak dapat memuat daftar transaksi. Pastikan server Laravel menyala dan Anda sudah login.');
-            setTransactions([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+            return Array.isArray(data) ? data : [];
+        },
+        enabled: isAdmin,
+    });
 
-    const handleStatusChange = async (transactionId, newStatus) => {
-        try {
+    const statusMutation = useMutation({
+        mutationFn: async ({ transactionId, newStatus }) => {
             const token = localStorage.getItem('access_token');
-
-            await apiClient.put(`/rentals/${transactionId}`, { 
-                status: newStatus 
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-
+            return await apiClient.put(`/rentals/${transactionId}`, 
+                { status: newStatus }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+        },
+        onSuccess: () => {
             alert('Status transaksi berhasil diperbarui!');
-            fetchTransactions();
-        } catch (err) {
+            queryClient.invalidateQueries({ queryKey: ['transactions_list'] });
+        },
+        onError: (err) => {
             console.error('Gagal mengubah status:', err);
             alert('Gagal mengubah status transaksi');
         }
+    });
+
+    const handleStatusChange = (transactionId, newStatus) => {
+        statusMutation.mutate({ transactionId, newStatus });
     };
 
     const getStatusBadgeStyle = (status) => {
@@ -77,6 +65,8 @@ function KelolaTransaksi() {
         return { backgroundColor: '#e2e3e5', color: '#383d41' };
     };
 
+    if (!isAdmin) return null; 
+
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
             <AdminSidebar />
@@ -88,11 +78,11 @@ function KelolaTransaksi() {
                 </div>
 
                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                    {loading && <p style={{ color: '#666' }}>Memuat data transaksi...</p>}
-                    {error && <p style={{ color: '#dc3545' }}>{error}</p>}
+                    {loading && <p style={{ color: '#666' }}>Memuat data transaksi dari server...</p>}
+                    {error && <p style={{ color: '#dc3545' }}>Gagal memuat transaksi. Pastikan server Laravel menyala.</p>}
                     
                     {!loading && !error && transactions.length === 0 && (
-                        <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>Belum ada transaksi.</p>
+                        <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>Belum ada transaksi di Database.</p>
                     )}
 
                     {!loading && !error && transactions.length > 0 && (
@@ -127,7 +117,7 @@ function KelolaTransaksi() {
                                                 {transaction.end_date || transaction.tanggal_selesai || '-'}
                                             </td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString()}
+                                                Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString('id-ID')}
                                             </td>
                                             <td style={{ padding: '12px' }}>
                                                 <span style={{
@@ -137,18 +127,21 @@ function KelolaTransaksi() {
                                                     fontWeight: '600',
                                                     ...getStatusBadgeStyle(transaction.status)
                                                 }}>
-                                                    {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                </span>
+                                                    {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                
+                                                </span>
                                             </td>
                                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                                 <select
                                                     value={transaction.status || 'pending'}
                                                     onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
+                                                    disabled={statusMutation.isPending}
                                                     style={{
                                                         padding: '6px 10px',
                                                         borderRadius: '4px',
                                                         border: '1px solid #ccc',
-                                                        cursor: 'pointer',
-                                                        fontSize: '12px'
+                                                        cursor: statusMutation.isPending ? 'wait' : 'pointer',
+                                                        fontSize: '12px',
+                                                        backgroundColor: statusMutation.isPending ? '#e9ecef' : '#fff'
                                                     }}
                                                 >
                                                     <option value="pending">Aktif</option>
@@ -175,7 +168,7 @@ function KelolaTransaksi() {
                             <h3 style={{ margin: '10px 0 0 0', color: '#28a745', fontSize: '24px' }}>
                                 Rp {Number(
                                     transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)
-                                ).toLocaleString()}
+                                ).toLocaleString('id-ID')}
                             </h3>
                         </div>
                     </div>

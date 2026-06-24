@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { useRentalStore } from '../store/useRentalStore'; 
 import apiClient from '../api/apiClient';
 
@@ -7,22 +8,17 @@ function Login() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
 
     const loginStore = useRentalStore((state) => state.login);
 
-    const handleLoginSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        
-        try {
-            const response = await apiClient.post('/auth/login', {
-                email: username.trim(),
-                password: password.trim()
-            });
-            
-            const userData = response.data.data || response.data.user || response.data;
-            const authToken = response.data.access_token || response.data.token || null;
+    const loginMutation = useMutation({
+        mutationFn: async (credentials) => {
+            const response = await apiClient.post('/auth/login', credentials);
+            return response.data;
+        },
+        onSuccess: (data) => {
+            const userData = data.data || data.user || data;
+            const authToken = data.access_token || data.token || null;
             
             if (authToken) {
                 localStorage.setItem('access_token', authToken);
@@ -45,16 +41,23 @@ function Login() {
             } else {
                 navigate('/dashboard');
             }
-
-        } catch (error) {
+        },
+        onError: (error) => {
             const pesanError = error.response?.data?.message || 'Username atau password salah, atau Server mati!';
             alert(pesanError);
             console.error("Login Error:", error);
-        } finally {
-            setIsLoading(false);
         }
+    });
+
+    const handleLoginSubmit = (e) => {
+        e.preventDefault();
+        loginMutation.mutate({
+            email: username.trim(),
+            password: password.trim()
+        });
     };
 
+    const isLoading = loginMutation.isPending;
     return (
         <div style={{ maxWidth: '400px', margin: '100px auto', padding: '30px', border: '1px solid #e0e0e0', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>

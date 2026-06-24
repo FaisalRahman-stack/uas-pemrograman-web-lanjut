@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; 
 import Login from './pages/Login.js';
 import Dashboard from './pages/Dashboard.js';
 import RentalForm from './pages/RentalForm.js';
@@ -8,30 +9,24 @@ import KelolaMobil from './pages/admin/KelolaMobil.js';
 import KelolaTransaksi from './pages/admin/KelolaTransaksi.js';
 import Navbar from './components/Navbar.js';
 
+const queryClient = new QueryClient();
+
 function App() {
-  const loginComponent = React.createElement(Login, null);
-  
-  const dashboardWithNavbar = React.createElement('div', null, 
-    React.createElement(Navbar, null),
-    React.createElement(Dashboard, null)
-  );
-
-  const rentalFormWithNavbar = React.createElement('div', null, 
-    React.createElement(Navbar, null),
-    React.createElement(RentalForm, null)
-  );
-
-  return React.createElement(Router, null, 
-    React.createElement('div', { style: { fontFamily: 'Arial, sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' } }, 
-      React.createElement(Routes, null, 
-        React.createElement(Route, { path: '/', element: loginComponent }),
-        React.createElement(Route, { path: '/dashboard', element: dashboardWithNavbar }),
-        React.createElement(Route, { path: '/rental/:id', element: rentalFormWithNavbar }),
-        React.createElement(Route, { path: '/admin/dashboard', element: React.createElement(AdminDashboard, null) }),
-        React.createElement(Route, { path: '/admin/mobil', element: React.createElement(KelolaMobil, null) }),
-        React.createElement(Route, { path: '/admin/transaksi', element: React.createElement(KelolaTransaksi, null) })
-      )
-    )
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<div><Navbar /><Dashboard /></div>} />
+            <Route path="/rental/:id" element={<div><Navbar /><RentalForm /></div>} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/mobil" element={<KelolaMobil />} />
+            <Route path="/admin/transaksi" element={<KelolaTransaksi />} />
+          </Routes>
+        </div>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
