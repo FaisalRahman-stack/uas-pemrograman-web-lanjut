@@ -11,7 +11,7 @@ function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const isAdmin = user?.role?.role_name?.toLowerCase() === 'admin';
+    const isAdmin = user?.role_id === 1 || user?.role?.role_name?.toLowerCase() === 'admin';
 
     useEffect(() => {
         if (!isAdmin) {
@@ -43,7 +43,13 @@ function AdminDashboard() {
         }
 
         try {
-            await apiClient.delete(`/vehicles/${vehicleId}`);
+            const token = localStorage.getItem('access_token');
+            
+            await apiClient.delete(`/vehicles/${vehicleId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             alert('Kendaraan berhasil dihapus');
             fetchVehicles();
         } catch (err) {
@@ -65,7 +71,6 @@ function AdminDashboard() {
                     <p style={{ margin: '5px 0 0 0', color: '#666' }}>Selamat datang, {user?.name || 'Admin'}</p>
                 </div>
 
-                {/* Stats Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
                     <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
                         <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TOTAL ARMADA</p>
@@ -81,7 +86,6 @@ function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Vehicles Table */}
                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h2 style={{ margin: 0, color: '#1a1a1a', fontSize: '18px' }}>Daftar Armada</h2>
@@ -126,7 +130,9 @@ function AdminDashboard() {
                                     {vehicles.map((vehicle) => (
                                         <tr key={vehicle.id} style={{ borderBottom: '1px solid #e6e6e6' }}>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.nama || vehicle.name}</td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.tipe || vehicle.vehicleType?.type_name || '-'}</td>
+                                            
+                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.vehicle_type?.type_name || vehicle.vehicleType?.type_name || vehicle.tipe || '-'}</td>
+                                            
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.spek?.replace('Plat: ', '') || vehicle.plate_number || '-'}</td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>Rp {Number(vehicle.harga || vehicle.price_per_day || 0).toLocaleString()}</td>
                                             <td style={{ padding: '12px' }}>

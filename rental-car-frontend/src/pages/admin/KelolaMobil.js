@@ -21,7 +21,7 @@ function KelolaMobil() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const isAdmin = user?.role?.role_name?.toLowerCase() === 'admin';
+    const isAdmin = user?.role_id === 1;
 
     useEffect(() => {
         if (!isAdmin) {
@@ -42,9 +42,9 @@ function KelolaMobil() {
             
             setFormData({
                 nama: vehicle.nama || vehicle.name || '',
-                tipe: vehicle.tipe || vehicle.vehicleType?.type_name || '',
+                tipe: vehicle.tipe || vehicle.vehicle_type?.type_name || '',
                 merek: vehicle.merek || '',
-                nomorPlat: vehicle.spek?.replace('Plat: ', '') || vehicle.plate_number || '',
+                nomorPlat: vehicle.plate_number || '',
                 tarifPerHari: vehicle.harga || vehicle.price_per_day || '',
                 status: vehicle.status?.toLowerCase() === 'available' ? 'available' : 'disewa'
             });
@@ -71,21 +71,32 @@ function KelolaMobil() {
         setError(null);
 
         try {
+            const token = localStorage.getItem('access_token');
+
+            let mappedTypeId = 1; 
+            if (formData.tipe === 'Sedan') mappedTypeId = 2;
+            if (formData.tipe === 'MPV') mappedTypeId = 3;
+            if (formData.tipe === 'Hatchback') mappedTypeId = 4;
+
             const payload = {
-                vehicle_type_id: 1, // Bisa diubah ke dropdown jika perlu
+                vehicle_type_id: mappedTypeId,
                 name: formData.nama,
                 plate_number: formData.nomorPlat,
                 price_per_day: parseInt(formData.tarifPerHari) || 0,
                 status: formData.status === 'available' ? 'available' : 'rented'
             };
 
+            const apiOptions = {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            };
+
             if (vehicleId) {
-                // Update
-                await apiClient.put(`/vehicles/${vehicleId}`, payload);
+                await apiClient.put(`/vehicles/${vehicleId}`, payload, apiOptions);
                 alert('Kendaraan berhasil diperbarui!');
             } else {
-                // Create
-                await apiClient.post('/vehicles', payload);
+                await apiClient.post('/vehicles', payload, apiOptions);
                 alert('Kendaraan berhasil ditambahkan!');
             }
 
@@ -171,7 +182,6 @@ function KelolaMobil() {
                                 <option value="Sedan">Sedan</option>
                                 <option value="MPV">MPV</option>
                                 <option value="Hatchback">Hatchback</option>
-                                <option value="Truck">Truck</option>
                             </select>
                         </div>
 

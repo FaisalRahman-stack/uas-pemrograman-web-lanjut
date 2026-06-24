@@ -11,7 +11,7 @@ function KelolaTransaksi() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const isAdmin = user?.role?.role_name?.toLowerCase() === 'admin';
+    const isAdmin = user?.role_id === 1 || user?.role?.role_name?.toLowerCase() === 'admin';
 
     useEffect(() => {
         if (!isAdmin) {
@@ -24,13 +24,21 @@ function KelolaTransaksi() {
     const fetchTransactions = async () => {
         try {
             setLoading(true);
-            const response = await apiClient.get('/rentals');
+            
+            const token = localStorage.getItem('access_token');
+
+            const response = await apiClient.get('/rentals', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
             const data = response.data.data || response.data;
             setTransactions(Array.isArray(data) ? data : []);
             setError(null);
         } catch (err) {
             console.error('Gagal memuat transaksi:', err);
-            setError('Tidak dapat memuat daftar transaksi.');
+            setError('Tidak dapat memuat daftar transaksi. Pastikan server Laravel menyala dan Anda sudah login.');
             setTransactions([]);
         } finally {
             setLoading(false);
@@ -39,7 +47,16 @@ function KelolaTransaksi() {
 
     const handleStatusChange = async (transactionId, newStatus) => {
         try {
-            await apiClient.put(`/rentals/${transactionId}`, { status: newStatus });
+            const token = localStorage.getItem('access_token');
+
+            await apiClient.put(`/rentals/${transactionId}`, { 
+                status: newStatus 
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
             alert('Status transaksi berhasil diperbarui!');
             fetchTransactions();
         } catch (err) {
@@ -50,11 +67,11 @@ function KelolaTransaksi() {
 
     const getStatusBadgeStyle = (status) => {
         const statusLower = status?.toLowerCase() || '';
-        if (statusLower === 'approved' || statusLower === 'selesai') {
+        if (statusLower === 'approved' || statusLower === 'selesai' || statusLower === 'completed') {
             return { backgroundColor: '#d4edda', color: '#155724' };
         } else if (statusLower === 'pending' || statusLower === 'menunggu') {
-            return { backgroundColor: '#fff3cd', color: '#856404' };
-        } else if (statusLower === 'rejected' || statusLower === 'ditolak') {
+            return { backgroundColor: '#cce5ff', color: '#004085' };
+        } else if (statusLower === 'cancelled' || statusLower === 'ditolak') {
             return { backgroundColor: '#f8d7da', color: '#721c24' };
         }
         return { backgroundColor: '#e2e3e5', color: '#383d41' };
@@ -70,7 +87,6 @@ function KelolaTransaksi() {
                     <p style={{ margin: '5px 0 0 0', color: '#666' }}>Kelola riwayat penyewaan mobil dari pelanggan</p>
                 </div>
 
-                {/* Transactions Table */}
                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
                     {loading && <p style={{ color: '#666' }}>Memuat data transaksi...</p>}
                     {error && <p style={{ color: '#dc3545' }}>{error}</p>}
@@ -99,10 +115,10 @@ function KelolaTransaksi() {
                                         <tr key={transaction.id} style={{ borderBottom: '1px solid #e6e6e6' }}>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>#{transaction.id}</td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.user?.name || transaction.penyewa || '-'}
+                                                {transaction.user?.name || transaction.penyewa || `User ID: ${transaction.user_id}`}
                                             </td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.vehicle?.name || transaction.mobil || '-'}
+                                                {transaction.vehicle?.name || transaction.mobil || `Mobil ID: ${transaction.vehicle_id}`}
                                             </td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>
                                                 {transaction.start_date || transaction.tanggal_mulai || '-'}
@@ -111,7 +127,7 @@ function KelolaTransaksi() {
                                                 {transaction.end_date || transaction.tanggal_selesai || '-'}
                                             </td>
                                             <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {Number(transaction.total_price || transaction.total || 0).toLocaleString()}
+                                                Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString()}
                                             </td>
                                             <td style={{ padding: '12px' }}>
                                                 <span style={{
@@ -121,8 +137,7 @@ function KelolaTransaksi() {
                                                     fontWeight: '600',
                                                     ...getStatusBadgeStyle(transaction.status)
                                                 }}>
-                                                    {transaction.status || 'Tidak diketahui'}
-                                                </span>
+                                                    {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                </span>
                                             </td>
                                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                                 <select
@@ -136,10 +151,9 @@ function KelolaTransaksi() {
                                                         fontSize: '12px'
                                                     }}
                                                 >
-                                                    <option value="pending">Menunggu</option>
-                                                    <option value="approved">Setujui</option>
+                                                    <option value="pending">Aktif</option>
                                                     <option value="completed">Selesai</option>
-                                                    <option value="rejected">Tolak</option>
+                                                    <option value="cancelled">Tolak</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -150,7 +164,6 @@ function KelolaTransaksi() {
                     )}
                 </div>
 
-                {/* Summary Stats */}
                 {!loading && transactions.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '30px' }}>
                         <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
@@ -160,7 +173,7 @@ function KelolaTransaksi() {
                         <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
                             <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TOTAL PENDAPATAN (Rp)</p>
                             <h3 style={{ margin: '10px 0 0 0', color: '#28a745', fontSize: '24px' }}>
-                                {Number(
+                                Rp {Number(
                                     transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)
                                 ).toLocaleString()}
                             </h3>

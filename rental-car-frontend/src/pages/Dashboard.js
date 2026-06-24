@@ -37,13 +37,18 @@ function Dashboard() {
                 const dataYangBenar = response.data.data ? response.data.data : response.data;
                 const formattedData = Array.isArray(dataYangBenar) ? dataYangBenar.map((item) => {
                     const namaMobil = item.nama || item.name || 'Nama Tidak Diketahui';
-                    const tipeMobil = item.tipe || item.vehicleType?.type_name || 'Unknown';
+                    
+                    const tipeMobil = item.tipe || item.vehicle_type?.type_name || item.vehicleType?.type_name || 'Unknown';
+                    
+                    const rawStatus = item.status ? item.status.toString().toLowerCase() : '';
+                    const statusMapped = rawStatus === 'available' ? 'Tersedia' : (rawStatus === 'rented' ? 'Dipinjam' : 'Tidak tersedia');
+
                     return {
                         id: item.id,
                         nama: namaMobil,
                         tipe: tipeMobil,
                         harga: item.harga || item.price_per_day || 0,
-                        status: item.status && item.status.toString().toLowerCase() === 'available' ? 'Tersedia' : item.status || 'Tidak tersedia',
+                        status: statusMapped,
                         gambar: getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
                         spek: item.spek || `Plat: ${item.plate_number || '-'}`,
                         Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
@@ -92,7 +97,6 @@ function Dashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '40px' }}>
                     {mobilTampil.map((mobil) => (
                         <div key={mobil.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
-                            {/* Pastikan field 'gambar' sesuai dengan yang dikirim backend (misal URL gambar) */}
                             <img 
                                 src={mobil.gambar} 
                                 alt={mobil.nama} 

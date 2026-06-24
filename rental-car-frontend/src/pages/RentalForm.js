@@ -108,6 +108,7 @@ function RentalForm() {
 
     const hargaPerHari = finalSelectedCar.harga || 350000;
     const totalBiaya = durasi * hargaPerHari;
+    
     const hitungTotalBiaya = (mulai, selesai) => {
         if (mulai && selesai) {
             const tgl1 = new Date(mulai);
@@ -123,29 +124,53 @@ function RentalForm() {
         }
     };
 
-    const handleSubmitTransaksi = (e) => {
+    const handleSubmitTransaksi = async (e) => {
         e.preventDefault();
         if (durasi <= 0) {
             alert('Tanggal selesai harus setelah tanggal mulai sewa!');
             return;
         }
 
-        const transaksiBaru = {
-            idTransaksi: `TRX-${new Date().getTime()}`,
-            mobilId: id,
-            penyewa: user ? user.username : 'Guest',
-            tanggalMulai,
-            tanggalSelesai,
-            durasi,
-            totalBiaya,
-            status: 'Menunggu Pembayaran'
-        };
+        try {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
 
-        addTransaction(transaksiBaru);
+            const payload = {
+                user_id: user?.id || 1,
+                vehicle_id: id,
+                start_date: tanggalMulai,
+                end_date: tanggalSelesai,
+                total_price: totalBiaya
+            };
 
-        alert(`Transaksi Berhasil Disimpan!\nID Mobil: ${id}\nPenyewa: ${transaksiBaru.penyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString()}`);
-        
-        navigate('/dashboard'); 
+            const response = await apiClient.post('/rentals', payload, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.success || response.status === 201) {
+                const namaPenyewa = user ? user.name || user.username : 'Faisal';
+                
+                addTransaction({
+                    idTransaksi: `TRX-${new Date().getTime()}`,
+                    mobilId: id,
+                    penyewa: namaPenyewa,
+                    tanggalMulai,
+                    tanggalSelesai,
+                    durasi,
+                    totalBiaya,
+                    status: 'Menunggu Pembayaran'
+                });
+
+                alert(`Transaksi Berhasil Disimpan ke Database!\nID Mobil: ${id}\nPenyewa: ${namaPenyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString()}`);
+                
+                navigate('/dashboard'); 
+            }
+        } catch (error) {
+            console.error("Gagal menyimpan transaksi ke database:", error);
+            const pesanError = error.response?.data?.message || 'Gagal terhubung ke server. Pastikan Anda sudah login akun dengan benar!';
+            alert(pesanError);
+        }
     };
 
     return (
@@ -167,7 +192,7 @@ function RentalForm() {
             <div style={{ marginTop: '30px' }}>
                 <h2>Formulir Penyewaan Kendaraan</h2>
                 <p>ID Mobil yang dipilih: <strong>{id}</strong></p>
-                {user && <p>Nama Penyewa: <strong>{user.username}</strong></p>}
+                {user && <p>Nama Penyewa: <strong>{user.name || user.username}</strong></p>}
                 <p>Tarif Sewa: Rp {hargaPerHari.toLocaleString()} / hari</p>
                 <hr />
             

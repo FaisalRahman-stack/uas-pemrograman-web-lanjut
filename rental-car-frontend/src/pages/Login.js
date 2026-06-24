@@ -8,7 +8,6 @@ function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [loginType, setLoginType] = useState('user'); // 'user' atau 'admin'
 
     const loginStore = useRentalStore((state) => state.login);
 
@@ -21,19 +20,27 @@ function Login() {
                 email: username.trim(),
                 password: password.trim()
             });
+            
             const userData = response.data.data || response.data.user || response.data;
             const authToken = response.data.access_token || response.data.token || null;
+            
+            if (authToken) {
+                localStorage.setItem('access_token', authToken);
+                localStorage.setItem('user_data', JSON.stringify(userData));
+            }
+
+            if (userData && !userData.role) {
+                userData.role = {
+                    role_name: userData.role_id === 1 ? 'admin' : 'customer'
+                };
+            }
+
             loginStore(userData, authToken);
             alert('Login Berhasil!');
 
-            // Tentukan rute berdasarkan login type dan role dari response
             const userRole = userData?.role?.role_name?.toLowerCase() || '';
             
-            if (loginType === 'admin' && userRole === 'admin') {
-                navigate('/admin/dashboard');
-            } else if (loginType === 'user' && userRole === 'customer') {
-                navigate('/dashboard');
-            } else if (userRole === 'admin') {
+            if (userRole === 'admin') {
                 navigate('/admin/dashboard');
             } else {
                 navigate('/dashboard');
@@ -55,35 +62,6 @@ function Login() {
                 <p style={{ color: '#666', margin: 0, fontSize: '14px' }}>Silakan masukkan akun rental Anda</p>
             </div>
 
-            {/* Login Type Selector */}
-            <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', color: '#333', fontWeight: 'bold' }}>Login Sebagai:</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }}>
-                        <input 
-                            type="radio" 
-                            name="loginType" 
-                            value="user" 
-                            checked={loginType === 'user'} 
-                            onChange={(e) => setLoginType(e.target.value)}
-                            style={{ marginRight: '8px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px' }}>Pengguna</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }}>
-                        <input 
-                            type="radio" 
-                            name="loginType" 
-                            value="admin" 
-                            checked={loginType === 'admin'} 
-                            onChange={(e) => setLoginType(e.target.value)}
-                            style={{ marginRight: '8px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px' }}>Admin</span>
-                    </label>
-                </div>
-            </div>
-
             <form onSubmit={handleLoginSubmit}>
                 <div style={{ marginBottom: '20px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333' }}>Email:</label>
@@ -92,7 +70,7 @@ function Login() {
                         value={username} 
                         onChange={(e) => setUsername(e.target.value)} 
                         required 
-                        placeholder="Contoh: faisal@gmail.com"
+                        placeholder="faisal@gmail.com atau admin@gmail.com"
                         style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
                     />
                 </div>
