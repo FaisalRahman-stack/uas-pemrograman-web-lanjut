@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login.js';
 import Dashboard from './pages/Dashboard.js';
 import RentalForm from './pages/RentalForm.js';
+import AdminDashboard from './pages/admin/AdminDashboard.js';
+import KelolaMobil from './pages/admin/KelolaMobil.js';
+import KelolaTransaksi from './pages/admin/KelolaTransaksi.js';
 import Navbar from './components/Navbar.js';
 
 function App() {
@@ -23,7 +26,10 @@ function App() {
       React.createElement(Routes, null, 
         React.createElement(Route, { path: '/', element: loginComponent }),
         React.createElement(Route, { path: '/dashboard', element: dashboardWithNavbar }),
-        React.createElement(Route, { path: '/rental/:id', element: rentalFormWithNavbar })
+        React.createElement(Route, { path: '/rental/:id', element: rentalFormWithNavbar }),
+        React.createElement(Route, { path: '/admin/dashboard', element: React.createElement(AdminDashboard, null) }),
+        React.createElement(Route, { path: '/admin/mobil', element: React.createElement(KelolaMobil, null) }),
+        React.createElement(Route, { path: '/admin/transaksi', element: React.createElement(KelolaTransaksi, null) })
       )
     )
   );

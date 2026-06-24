@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRentalStore } from '../store/useRentalStore'; 
 import apiClient from '../api/apiClient';
+import { dummyCars, getCarImage } from '../data/dummyCars';
+
+const getDeskripsiFungsional = (nama = '', tipe = '') => {
+    const lowerNama = nama.toLowerCase();
+    const lowerTipe = tipe.toLowerCase();
+
+    if (lowerNama.includes('avanza') || lowerNama.includes('xpander') || lowerTipe === 'suv' || lowerTipe === 'mpv') {
+        return "Kendaraan keluarga yang tangguh, kabin luas, cocok untuk perjalanan jauh maupun perkotaan.";
+    }
+    if (lowerNama.includes('civic') || lowerTipe === 'sedan') {
+        return "Sedan sport premium dengan performa tinggi, kendali lincah, cocok untuk perjalanan dinas atau gaya hidup.";
+    }
+    if (lowerNama.includes('brio') || lowerTipe === 'hatchback') {
+        return "Mobil lincah dan irit, ideal untuk mobilitas tinggi di dalam kota dan perjalanan singkat.";
+    }
+    return "Kendaraan serbaguna yang nyaman untuk berbagai jenis perjalanan, dilengkapi fitur modern.";
+};
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -18,10 +35,27 @@ function Dashboard() {
                 setLoadingData(true);
                 const response = await apiClient.get('/vehicles'); 
                 const dataYangBenar = response.data.data ? response.data.data : response.data;
-                console.log("Isi data dari Laravel:", dataYangBenar);
-                setCars(dataYangBenar);
+                const formattedData = Array.isArray(dataYangBenar) ? dataYangBenar.map((item) => {
+                    const namaMobil = item.nama || item.name || 'Nama Tidak Diketahui';
+                    const tipeMobil = item.tipe || item.vehicleType?.type_name || 'Unknown';
+                    return {
+                        id: item.id,
+                        nama: namaMobil,
+                        tipe: tipeMobil,
+                        harga: item.harga || item.price_per_day || 0,
+                        status: item.status && item.status.toString().toLowerCase() === 'available' ? 'Tersedia' : item.status || 'Tidak tersedia',
+                        gambar: getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
+                        spek: item.spek || `Plat: ${item.plate_number || '-'}`,
+                        Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
+                    };
+                }) : dummyCars;
+
+                console.log("Isi data dari Laravel:", formattedData);
+                setCars(formattedData.length ? formattedData : dummyCars);
             } catch (error) {
-                console.error("Gagal menarik data dari Backend:", error);
+                const serverMessage = error.response && error.response.data ? error.response.data : error.message;
+                console.error("Gagal menarik data dari Backend:", serverMessage);
+                setCars(dummyCars);
             } finally {
                 setLoadingData(false);
             }

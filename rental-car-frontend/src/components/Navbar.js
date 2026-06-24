@@ -5,6 +5,8 @@ import { useRentalStore } from '../store/useRentalStore';
 function Navbar() {
     const navigate = useNavigate();
     const logout = useRentalStore((state) => state.logout);
+    const user = useRentalStore((state) => state.user);
+    const isAdmin = user?.role?.role_name?.toLowerCase() === 'admin';
 
     const handleLogoutClick = () => {
         logout();
@@ -28,6 +30,14 @@ function Navbar() {
             </div>
             
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                {isAdmin && (
+                    <span 
+                        onClick={() => navigate('/admin')} 
+                        style={{ cursor: 'pointer', fontSize: '14px' }}
+                    >
+                        Admin
+                    </span>
+                )}
                 <span 
                     onClick={() => navigate('/dashboard')} 
                     style={{ cursor: 'pointer', fontSize: '14px' }}
