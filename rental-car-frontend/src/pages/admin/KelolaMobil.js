@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
 import apiClient from '../../api/apiClient';
+
+import Navbar from '../../components/Navbar';
 import AdminSidebar from '../../components/AdminSidebar';
 
 function KelolaMobil() {
@@ -98,84 +100,150 @@ function KelolaMobil() {
     if (!isAdmin) return null;
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-            <AdminSidebar />
-            <div style={{ flex: 1, padding: '30px' }}>
-                <div style={{ marginBottom: '30px' }}>
-                    <button
-                        onClick={() => navigate('/admin/dashboard')}
-                        style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', marginBottom: '15px', fontSize: '14px' }}
-                    >
-                        ← Kembali
-                    </button>
-                    <h1 style={{ margin: 0, color: '#1a1a1a', fontSize: '28px' }}>
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            <Navbar />
+
+            
+            <div className="flex flex-1 overflow-hidden">
+                
+                <AdminSidebar />
+                
+                
+                <main className="flex-1 p-8 lg:p-12 overflow-y-auto">
+                    
+                    <h1 className="text-3xl font-bold text-black mb-8">
                         {vehicleId ? 'Edit Kendaraan' : 'Tambah Kendaraan Baru'}
                     </h1>
-                </div>
 
-                <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6', maxWidth: '600px' }}>
-                    
-                    {loadingFetch && <p style={{ color: '#666', marginBottom: '15px' }}>Memuat data kendaraan...</p>}
-                    {errorFetch && <p style={{ color: '#dc3545', marginBottom: '15px' }}>Gagal memuat data. Server mungkin bermasalah.</p>}
+                    <div className="bg-[#f4f4f4] rounded-xl p-8 md:p-10 max-w-5xl">
+                        
+                        {loadingFetch && <p className="text-gray-500 mb-6">Memuat data kendaraan...</p>}
+                        {errorFetch && <p className="text-red-500 mb-6">Gagal memuat data. Server mungkin bermasalah.</p>}
 
-                    <form onSubmit={handleSubmit}>
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Nama Mobil:</label>
-                            <input type="text" name="nama" value={formData.nama} onChange={handleChange} required placeholder="Contoh: Toyota Avanza" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                        </div>
+                        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+                            
+                            
+                            <div>
+                                <h2 className="text-2xl font-bold text-black mb-6">Informasi Mobil</h2>
+                                
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Nama Mobil:</label>
+                                        <input 
+                                            type="text" 
+                                            name="nama" 
+                                            value={formData.nama} 
+                                            onChange={handleChange} 
+                                            required 
+                                            placeholder="Contoh: Toyota Avanza" 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors" 
+                                        />
+                                    </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Merek/Merk:</label>
-                            <input type="text" name="merek" value={formData.merek} onChange={handleChange} placeholder="Contoh: Toyota" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                        </div>
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Merek:</label>
+                                        <input 
+                                            type="text" 
+                                            name="merek" 
+                                            value={formData.merek} 
+                                            onChange={handleChange} 
+                                            placeholder="Contoh: Toyota" 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors" 
+                                        />
+                                    </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Tipe Kendaraan:</label>
-                            <select name="tipe" value={formData.tipe} onChange={handleChange} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}>
-                                <option value="">-- Pilih Tipe --</option>
-                                <option value="SUV">SUV</option>
-                                <option value="Sedan">Sedan</option>
-                                <option value="MPV">MPV</option>
-                                <option value="Hatchback">Hatchback</option>
-                            </select>
-                        </div>
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Tipe Kendaraan:</label>
+                                        <select 
+                                            name="tipe" 
+                                            value={formData.tipe} 
+                                            onChange={handleChange} 
+                                            required 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors text-gray-700"
+                                        >
+                                            <option value="">– Pilih Tipe –</option>
+                                            <option value="SUV">SUV</option>
+                                            <option value="Sedan">Sedan</option>
+                                            <option value="MPV">MPV</option>
+                                            <option value="Hatchback">Hatchback</option>
+                                        </select>
+                                    </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Nomor Plat:</label>
-                            <input type="text" name="nomorPlat" value={formData.nomorPlat} onChange={handleChange} required placeholder="Contoh: B 1234 ABC" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                        </div>
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Nomor Plat:</label>
+                                        <input 
+                                            type="text" 
+                                            name="nomorPlat" 
+                                            value={formData.nomorPlat} 
+                                            onChange={handleChange} 
+                                            required 
+                                            placeholder="Contoh: B 1234 ABC" 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Tarif Per Hari (Rp):</label>
-                            <input type="number" name="tarifPerHari" value={formData.tarifPerHari} onChange={handleChange} required min="0" placeholder="Contoh: 350000" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                        </div>
+                            
+                            <div className="md:border-l md:border-black md:pl-16 flex flex-col">
+                                <h2 className="text-2xl font-bold text-black mb-6">Formulir Penyewaan</h2>
+                                
+                                <div className="space-y-5 flex-1">
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Tarif Per Hari (Rp):</label>
+                                        <input 
+                                            type="number" 
+                                            name="tarifPerHari" 
+                                            value={formData.tarifPerHari} 
+                                            onChange={handleChange} 
+                                            required 
+                                            min="0" 
+                                            placeholder="Contoh: 350000" 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors" 
+                                        />
+                                    </div>
 
-                        <div style={{ marginBottom: '30px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#333', fontWeight: '600' }}>Status:</label>
-                            <select name="status" value={formData.status} onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}>
-                                <option value="available">Tersedia</option>
-                                <option value="disewa">Disewa</option>
-                            </select>
-                        </div>
+                                    <div>
+                                        <label className="block font-bold text-black mb-2">Status:</label>
+                                        <select 
+                                            name="status" 
+                                            value={formData.status} 
+                                            onChange={handleChange} 
+                                            className="w-full border border-gray-300 p-2.5 bg-white outline-none focus:border-black transition-colors text-gray-700"
+                                        >
+                                            <option value="available">Tersedia</option>
+                                            <option value="disewa">Disewa</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                                type="submit"
-                                disabled={saveMutation.isPending || loadingFetch}
-                                style={{ flex: 1, padding: '12px', backgroundColor: saveMutation.isPending ? '#6c757d' : '#007bff', color: '#fff', border: 'none', borderRadius: '6px', cursor: saveMutation.isPending ? 'wait' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}
-                            >
-                                {saveMutation.isPending ? 'Menyimpan...' : vehicleId ? 'Update Kendaraan' : 'Tambah Kendaraan'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/admin/dashboard')}
-                                style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                                
+                                <div className="flex gap-4 mt-8 pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={saveMutation.isPending || loadingFetch}
+                                        className={`flex-1 py-2.5 border border-gray-300 transition-colors ${
+                                            saveMutation.isPending || loadingFetch
+                                            ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                            : 'bg-white text-black hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {saveMutation.isPending ? 'Menyimpan...' : vehicleId ? 'Simpan' : 'Tambah'}
+                                    </button>
+                                    
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/admin/dashboard')}
+                                        className="flex-1 py-2.5 bg-white text-black border border-gray-300 hover:bg-gray-50 transition-colors"
+                                    >
+                                        Batal
+                                    </button>
+                                </div>
+
+                            </div>
+                        </form>
+                    </div>
+                </main>
             </div>
         </div>
     );

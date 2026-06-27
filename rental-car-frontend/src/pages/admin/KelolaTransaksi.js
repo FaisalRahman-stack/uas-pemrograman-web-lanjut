@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
 import apiClient from '../../api/apiClient';
+
+import Navbar from '../../components/Navbar';
 import AdminSidebar from '../../components/AdminSidebar';
 
 function KelolaTransaksi() {
@@ -53,126 +55,90 @@ function KelolaTransaksi() {
         statusMutation.mutate({ transactionId, newStatus });
     };
 
-    const getStatusBadgeStyle = (status) => {
-        const statusLower = status?.toLowerCase() || '';
-        if (statusLower === 'approved' || statusLower === 'selesai' || statusLower === 'completed') {
-            return { backgroundColor: '#d4edda', color: '#155724' };
-        } else if (statusLower === 'pending' || statusLower === 'menunggu') {
-            return { backgroundColor: '#cce5ff', color: '#004085' };
-        } else if (statusLower === 'cancelled' || statusLower === 'ditolak') {
-            return { backgroundColor: '#f8d7da', color: '#721c24' };
-        }
-        return { backgroundColor: '#e2e3e5', color: '#383d41' };
-    };
-
-    if (!isAdmin) return null; 
+    if (!isAdmin) return null;
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-            <AdminSidebar />
-            
-            <div style={{ flex: 1, padding: '30px' }}>
-                <div style={{ marginBottom: '30px' }}>
-                    <h1 style={{ margin: 0, color: '#1a1a1a', fontSize: '28px' }}>Kelola Transaksi</h1>
-                    <p style={{ margin: '5px 0 0 0', color: '#666' }}>Kelola riwayat penyewaan mobil dari pelanggan</p>
-                </div>
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            <Navbar />
 
-                <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                    {loading && <p style={{ color: '#666' }}>Memuat data transaksi dari server...</p>}
-                    {error && <p style={{ color: '#dc3545' }}>Gagal memuat transaksi. Pastikan server Laravel menyala.</p>}
-                    
-                    {!loading && !error && transactions.length === 0 && (
-                        <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>Belum ada transaksi di Database.</p>
-                    )}
+            <div className="flex flex-1 overflow-hidden">
+                <AdminSidebar />
+                
+                <main className="flex-1 p-8 lg:p-12 overflow-y-auto">
+                    <h1 className="text-3xl font-bold text-black mb-8">Kelola Transaksi</h1>
 
-                    {!loading && !error && transactions.length > 0 && (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #e6e6e6' }}>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>ID</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Penyewa</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Mobil</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Tgl Mulai</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Tgl Selesai</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Total (Rp)</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Status</th>
-                                        <th style={{ textAlign: 'center', padding: '12px', color: '#333', fontWeight: '600' }}>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.map((transaction) => (
-                                        <tr key={transaction.id} style={{ borderBottom: '1px solid #e6e6e6' }}>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>#{transaction.id}</td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.user?.name || transaction.penyewa || `User ID: ${transaction.user_id}`}
-                                            </td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.vehicle?.name || transaction.mobil || `Mobil ID: ${transaction.vehicle_id}`}
-                                            </td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.start_date || transaction.tanggal_mulai || '-'}
-                                            </td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                {transaction.end_date || transaction.tanggal_selesai || '-'}
-                                            </td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>
-                                                Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString('id-ID')}
-                                            </td>
-                                            <td style={{ padding: '12px' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    ...getStatusBadgeStyle(transaction.status)
-                                                }}>
-                                                    {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <select
-                                                    value={transaction.status || 'pending'}
-                                                    onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
-                                                    disabled={statusMutation.isPending}
-                                                    style={{
-                                                        padding: '6px 10px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid #ccc',
-                                                        cursor: statusMutation.isPending ? 'wait' : 'pointer',
-                                                        fontSize: '12px',
-                                                        backgroundColor: statusMutation.isPending ? '#e9ecef' : '#fff'
-                                                    }}
-                                                >
-                                                    <option value="pending">Aktif</option>
-                                                    <option value="completed">Selesai</option>
-                                                    <option value="cancelled">Tolak</option>
-                                                </select>
-                                            </td>
+                    <div className="bg-[#f4f4f4] rounded-xl p-8">
+                        {loading && <p className="text-gray-500">Memuat data transaksi...</p>}
+                        {error && <p className="text-red-500">Gagal memuat transaksi.</p>}
+                        
+                        {!loading && !error && transactions.length === 0 && (
+                            <p className="text-center py-10 text-gray-500">Belum ada transaksi.</p>
+                        )}
+
+                        {!loading && !error && transactions.length > 0 && (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">ID</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Penyewa</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Mobil</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Tgl Mulai</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Tgl Selesai</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Total (Rp)</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Status</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm text-center">Aksi</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.map((transaction) => (
+                                            <tr key={transaction.id} className="border-b border-gray-200/50 hover:bg-gray-200/20">
+                                                <td className="py-4 text-sm text-gray-900">#{transaction.id}</td>
+                                                <td className="py-4 text-sm text-gray-900">{transaction.user?.name || transaction.penyewa}</td>
+                                                <td className="py-4 text-sm text-gray-900">{transaction.vehicle?.name || transaction.mobil}</td>
+                                                <td className="py-4 text-sm text-gray-900">{transaction.start_date || transaction.tanggal_mulai}</td>
+                                                <td className="py-4 text-sm text-gray-900">{transaction.end_date || transaction.tanggal_selesai}</td>
+                                                <td className="py-4 text-sm text-gray-900">Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString('id-ID')}</td>
+                                                <td className="py-4">
+                                                    <span className="px-4 py-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+                                                        {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 text-center">
+                                                    <select
+                                                        value={transaction.status || 'pending'}
+                                                        onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
+                                                        disabled={statusMutation.isPending}
+                                                        className="border border-gray-300 rounded p-1 text-sm bg-white"
+                                                    >
+                                                        <option value="pending">Aktif</option>
+                                                        <option value="completed">Selesai</option>
+                                                        <option value="cancelled">Tolak</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
+                    {!loading && transactions.length > 0 && (
+                        <div className="grid grid-cols-2 gap-6 mt-8">
+                            <div className="bg-[#f4f4f4] rounded-xl p-6">
+                                <p className="font-bold text-black mb-2 text-sm">TOTAL TRANSAKSI</p>
+                                <h3 className="text-4xl font-bold text-black">{transactions.length}</h3>
+                            </div>
+                            <div className="bg-[#f4f4f4] rounded-xl p-6">
+                                <p className="font-bold text-black mb-2 text-sm">TOTAL PENDAPATAN (RP)</p>
+                                <h3 className="text-4xl font-bold text-blue-600">
+                                    Rp {Number(transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)).toLocaleString('id-ID')}
+                                </h3>
+                            </div>
                         </div>
                     )}
-                </div>
-
-                {!loading && transactions.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '30px' }}>
-                        <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                            <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TOTAL TRANSAKSI</p>
-                            <h3 style={{ margin: '10px 0 0 0', color: '#1a1a1a', fontSize: '24px' }}>{transactions.length}</h3>
-                        </div>
-                        <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                            <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TOTAL PENDAPATAN (Rp)</p>
-                            <h3 style={{ margin: '10px 0 0 0', color: '#28a745', fontSize: '24px' }}>
-                                Rp {Number(
-                                    transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)
-                                ).toLocaleString('id-ID')}
-                            </h3>
-                        </div>
-                    </div>
-                )}
+                </main>
             </div>
         </div>
     );

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
 import apiClient from '../../api/apiClient';
+
+import Navbar from '../../components/Navbar';
 import AdminSidebar from '../../components/AdminSidebar';
 
 function AdminDashboard() {
@@ -59,130 +61,120 @@ function AdminDashboard() {
     if (!isAdmin) return null;
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-            <AdminSidebar />
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            <Navbar />
+
             
-            <div style={{ flex: 1, padding: '30px' }}>
-                <div style={{ marginBottom: '30px' }}>
-                    <h1 style={{ margin: 0, color: '#1a1a1a', fontSize: '28px' }}>Dashboard Admin</h1>
-                    <p style={{ margin: '5px 0 0 0', color: '#666' }}>Selamat datang, {user?.name || 'Admin'}</p>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                    <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                        <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TOTAL ARMADA</p>
-                        <h3 style={{ margin: '10px 0 0 0', color: '#1a1a1a', fontSize: '24px' }}>{vehicles.length}</h3>
-                    </div>
-                    <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                        <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>TERSEDIA</p>
-                        <h3 style={{ margin: '10px 0 0 0', color: '#28a745', fontSize: '24px' }}>{availableCount}</h3>
-                    </div>
-                    <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                        <p style={{ margin: 0, color: '#666', fontSize: '12px', fontWeight: '600' }}>DISEWA</p>
-                        <h3 style={{ margin: '10px 0 0 0', color: '#ffc107', fontSize: '24px' }}>{rentedCount}</h3>
-                    </div>
-                </div>
-
-                <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e6e6e6' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h2 style={{ margin: 0, color: '#1a1a1a', fontSize: '18px' }}>Daftar Armada</h2>
-                        <button
-                            onClick={() => navigate('/admin/mobil')}
-                            style={{
-                                padding: '10px 20px',
-                                backgroundColor: '#007bff',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                fontSize: '14px'
-                            }}
-                        >
-                            + Tambah Mobil
-                        </button>
-                    </div>
-
-                    {loading && <p style={{ color: '#666' }}>Memuat data armada...</p>}
-                    {error && <p style={{ color: '#dc3545' }}>Tidak dapat memuat daftar kendaraan.</p>}
+            <div className="flex flex-1 overflow-hidden">
+                
+                <AdminSidebar />
+                
+                
+                <main className="flex-1 p-8 lg:p-12 overflow-y-auto">
                     
-                    {!loading && !error && vehicles.length === 0 && (
-                        <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>Belum ada kendaraan terdaftar.</p>
-                    )}
+                    <h1 className="text-3xl font-bold text-black mb-8">Dashboard</h1>
 
-                    {!loading && !error && vehicles.length > 0 && (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #e6e6e6' }}>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Nama</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Tipe</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Plat</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Tarif/Hari</th>
-                                        <th style={{ textAlign: 'left', padding: '12px', color: '#333', fontWeight: '600' }}>Status</th>
-                                        <th style={{ textAlign: 'center', padding: '12px', color: '#333', fontWeight: '600' }}>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {vehicles.map((vehicle) => (
-                                        <tr key={vehicle.id} style={{ borderBottom: '1px solid #e6e6e6' }}>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.nama || vehicle.name}</td>
-                                            
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.vehicle_type?.type_name || vehicle.vehicleType?.type_name || vehicle.tipe || '-'}</td>
-                                            
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>{vehicle.spek?.replace('Plat: ', '') || vehicle.plate_number || '-'}</td>
-                                            <td style={{ padding: '12px', color: '#1a1a1a' }}>Rp {Number(vehicle.harga || vehicle.price_per_day || 0).toLocaleString()}</td>
-                                            <td style={{ padding: '12px' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '4px',
-                                                    backgroundColor: vehicle.status?.toLowerCase() === 'available' ? '#d4edda' : '#fff3cd',
-                                                    color: vehicle.status?.toLowerCase() === 'available' ? '#155724' : '#856404',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600'
-                                                }}>
-                                                    {vehicle.status || 'Tidak diketahui'}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => navigate(`/admin/mobil?id=${vehicle.id}`)}
-                                                    style={{
-                                                        padding: '6px 12px',
-                                                        backgroundColor: '#28a745',
-                                                        color: '#fff',
-                                                        border: 'none',
-                                                        borderRadius: '4px',
-                                                        cursor: 'pointer',
-                                                        marginRight: '5px',
-                                                        fontSize: '12px'
-                                                    }}
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(vehicle.id)}
-                                                    disabled={deleteMutation.isPending}
-                                                    style={{
-                                                        padding: '6px 12px',
-                                                        backgroundColor: deleteMutation.isPending ? '#6c757d' : '#dc3545',
-                                                        color: '#fff',
-                                                        border: 'none',
-                                                        borderRadius: '4px',
-                                                        cursor: deleteMutation.isPending ? 'wait' : 'pointer',
-                                                        fontSize: '12px'
-                                                    }}
-                                                >
-                                                    {deleteMutation.isPending && deleteMutation.variables === vehicle.id ? 'Menghapus...' : 'Hapus'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-[#f4f4f4] rounded-xl p-6">
+                            <h3 className="font-bold text-lg text-black mb-2">Total Armada</h3>
+                            <p className="text-5xl font-bold text-black">{vehicles.length}</p>
                         </div>
-                    )}
-                </div>
+                        <div className="bg-[#f4f4f4] rounded-xl p-6">
+                            <h3 className="font-bold text-lg text-black mb-2">Armada Tersedia</h3>
+                            <p className="text-5xl font-bold text-blue-500">{availableCount}</p>
+                        </div>
+                        <div className="bg-[#f4f4f4] rounded-xl p-6">
+                            <h3 className="font-bold text-lg text-black mb-2">Armada Disewa</h3>
+                            <p className="text-5xl font-bold text-red-500">{rentedCount}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#f4f4f4] rounded-xl p-6 md:p-8">
+                        
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-black">Daftar Armada</h2>
+                            <button
+                                onClick={() => navigate('/admin/mobil')}
+                                className="bg-white px-6 py-2 rounded-full font-bold text-sm text-black hover:bg-gray-100 transition-colors shadow-sm"
+                            >
+                                Tambah
+                            </button>
+                        </div>
+
+                        {loading && <p className="text-gray-500">Memuat data armada...</p>}
+                        {error && <p className="text-red-500">Tidak dapat memuat daftar kendaraan.</p>}
+                        
+                        {!loading && !error && vehicles.length === 0 && (
+                            <div className="text-center py-10 text-gray-500 border border-dashed border-gray-300 rounded-lg">
+                                Belum ada kendaraan terdaftar.
+                            </div>
+                        )}
+
+                        {!loading && !error && vehicles.length > 0 && (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Nama</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Tipe</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Plat</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Tarif/Hari</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm">Status</th>
+                                            <th className="border-b border-black pb-3 font-bold text-black text-sm text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {vehicles.map((vehicle) => (
+                                            <tr key={vehicle.id} className="border-b border-gray-200/50 hover:bg-gray-200/20 transition-colors">
+                                                <td className="py-4 text-sm text-gray-900">{vehicle.nama || vehicle.name}</td>
+                                                
+                                                <td className="py-4 text-sm text-gray-900">
+                                                    {vehicle.vehicle_type?.type_name || vehicle.vehicleType?.type_name || vehicle.tipe || '-'}
+                                                </td>
+                                                
+                                                <td className="py-4 text-sm text-gray-900">
+                                                    {vehicle.spek?.replace('Plat: ', '') || vehicle.plate_number || '-'}
+                                                </td>
+                                                
+                                                <td className="py-4 text-sm text-gray-900">
+                                                    Rp {Number(vehicle.harga || vehicle.price_per_day || 0).toLocaleString('id-ID')}
+                                                </td>
+                                                
+                                                <td className="py-4">
+                                                    <span className={`px-4 py-1.5 rounded-full text-xs font-medium text-white ${
+                                                        vehicle.status?.toLowerCase() === 'available' ? 'bg-[#3b6fff]' : 'bg-[#ef4444]'
+                                                    }`}>
+                                                        {vehicle.status?.toLowerCase() === 'available' ? 'Tersedia' : 'Disewa'}
+                                                    </span>
+                                                </td>
+                                                
+                                                <td className="py-4 text-center space-x-2">
+                                                    <button
+                                                        onClick={() => navigate(`/admin/mobil?id=${vehicle.id}`)}
+                                                        className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-black rounded-full text-xs font-medium transition-colors"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(vehicle.id)}
+                                                        disabled={deleteMutation.isPending}
+                                                        className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                            deleteMutation.isPending && deleteMutation.variables === vehicle.id 
+                                                            ? 'bg-gray-300 text-gray-500 cursor-wait' 
+                                                            : 'bg-gray-200 hover:bg-gray-300 text-black cursor-pointer'
+                                                        }`}
+                                                    >
+                                                        {deleteMutation.isPending && deleteMutation.variables === vehicle.id ? 'Hapus...' : 'Hapus'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
         </div>
     );
