@@ -75,6 +75,15 @@ class RentalController extends Controller
         ], 200);
     }
 
+    protected function syncVehicleStatus(Rental $rental, string $newStatus)
+    {
+        if (in_array($newStatus, ['completed', 'cancelled'])) {
+            Vehicle::where('id', $rental->vehicle_id)->update(['status' => 'available']);
+        } elseif (in_array($newStatus, ['menunggu', 'disetujui'])) {
+            Vehicle::where('id', $rental->vehicle_id)->update(['status' => 'rented']);
+        }
+    }
+
     public function update(Request $request, $id)
     {
         $rental = Rental::find($id);
@@ -86,16 +95,36 @@ class RentalController extends Controller
             ], 404);
         }
 
-        $rental->update($request->only('status'));
+        $request->validate([
+            'status' => 'required|in:menunggu,disetujui,completed,cancelled',
+        ]);
 
-        if (in_array($request->status, ['completed', 'cancelled'])) {
-            Vehicle::where('id', $rental->vehicle_id)->update(['status' => 'available']);
-        }
+        $rental->update($request->only('status'));
+        $this->syncVehicleStatus($rental, $request->status);
 
         return response()->json([
             'success' => true,
             'message' => 'Status transaksi berhasil diperbarui',
             'data'    => $rental
+        ], 200);
+    }
+
+    public function destroy($id)
+    {
+        $rental = Rental::find($id);
+
+        if (!$rental) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data transaksi tidak ditemukan'
+            ], 404);
+        }
+
+        $rental->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaksi berhasil dihapus'
         ], 200);
     }
 
@@ -150,6 +179,7 @@ class RentalController extends Controller
         ]);
 
         $rental->update(['status' => $request->status]);
+        $this->syncVehicleStatus($rental, $request->status);
 
         return response()->json([
             'success' => true,

@@ -58,11 +58,35 @@ function KelolaTransaksi() {
         }
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: async (transactionId) => {
+            return await apiClient.delete(`/rentals/${transactionId}`);
+        },
+        onSuccess: (response, transactionId) => {
+            alert('Log transaksi berhasil dihapus');
+            queryClient.setQueryData(['transactions_list'], (oldData) => {
+                if (!Array.isArray(oldData)) return oldData;
+                return oldData.filter((transaction) => transaction.id !== transactionId);
+            });
+            queryClient.invalidateQueries({ queryKey: ['transactions_list'] });
+        },
+        onError: (err) => {
+            console.error('Gagal menghapus transaksi:', err);
+            alert('Gagal menghapus log transaksi');
+        }
+    });
+
     const handleStatusChange = (transactionId, newStatus) => {
         statusMutation.mutate({ transactionId, newStatus });
     };
 
-    const activeTransactions = transactions.filter((transaction) => transaction.status !== 'cancelled');
+    const handleDeleteLog = (transactionId) => {
+        if (!window.confirm('Hapus log transaksi ini?')) return;
+        deleteMutation.mutate(transactionId);
+    };
+
+    const activeTransactions = transactions.filter((transaction) => ['menunggu', 'disetujui'].includes(transaction.status));
+    const hasTransactions = transactions.length > 0;
 
     if (!isAdmin) return null;
 
@@ -80,11 +104,11 @@ function KelolaTransaksi() {
                         {loading && <p className="text-gray-500">Memuat data transaksi...</p>}
                         {error && <p className="text-red-500">Gagal memuat transaksi.</p>}
                         
-                        {!loading && !error && activeTransactions.length === 0 && (
-                            <p className="text-center py-10 text-gray-500">Belum ada transaksi aktif.</p>
+                        {!loading && !error && transactions.length === 0 && (
+                            <p className="text-center py-10 text-gray-500">Belum ada transaksi.</p>
                         )}
 
-                        {!loading && !error && activeTransactions.length > 0 && (
+                        {!loading && !error && transactions.length > 0 && (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
@@ -100,7 +124,7 @@ function KelolaTransaksi() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {activeTransactions.map((transaction) => (
+                                        {transactions.map((transaction) => (
                                             <tr key={transaction.id} className="border-b border-gray-200/50 hover:bg-gray-200/20">
                                                 <td className="py-4 text-sm text-gray-900">#{transaction.id}</td>
                                                 <td className="py-4 text-sm text-gray-900">{transaction.user?.name || transaction.penyewa}</td>
@@ -121,7 +145,7 @@ function KelolaTransaksi() {
                                                     </span>
                                                 </td>
                                                 <td className="py-4 text-center">
-                                                    <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-2 items-center">
                                                         <select
                                                             value={transaction.status || 'menunggu'}
                                                             onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
@@ -141,6 +165,13 @@ function KelolaTransaksi() {
                                                                 Lihat Bukti
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => handleDeleteLog(transaction.id)}
+                                                            disabled={deleteMutation.isPending}
+                                                            className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                                                        >
+                                                            Hapus Log
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -155,12 +186,12 @@ function KelolaTransaksi() {
                         <div className="grid grid-cols-2 gap-6 mt-8">
                             <div className="bg-[#f4f4f4] rounded-xl p-6">
                                 <p className="font-bold text-black mb-2 text-sm">TOTAL TRANSAKSI</p>
-                                <h3 className="text-4xl font-bold text-black">{activeTransactions.length}</h3>
+                                <h3 className="text-4xl font-bold text-black">{transactions.length}</h3>
                             </div>
                             <div className="bg-[#f4f4f4] rounded-xl p-6">
                                 <p className="font-bold text-black mb-2 text-sm">TOTAL PENDAPATAN (RP)</p>
                                 <h3 className="text-4xl font-bold text-blue-600">
-                                    Rp {Number(activeTransactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)).toLocaleString('id-ID')}
+                                    Rp {Number(transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)).toLocaleString('id-ID')}
                                 </h3>
                             </div>
                         </div>

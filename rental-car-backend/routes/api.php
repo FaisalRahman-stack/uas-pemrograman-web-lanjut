@@ -32,6 +32,7 @@ Route::prefix('v1')->group(function () {
         // Fitur upload bukti bayar dan update status
         Route::post('/rentals/{rental}/upload-proof', [RentalController::class, 'uploadProof']);
         Route::patch('/rentals/{rental}/update-status', [RentalController::class, 'updateStatus']);
+        Route::delete('/rentals/{rental}', [RentalController::class, 'destroy']);
         
     });
 
