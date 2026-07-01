@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('start_date'); 
             $table->date('end_date');  
             $table->integer('total_price'); 
-            $table->enum('status', ['pending', 'confirmed', 'ongoing', 'completed', 'cancelled'])->default('pending');
+            $table->enum('status', ['menunggu', 'disetujui', 'completed', 'cancelled'])->default('menunggu');
             $table->timestamps();
         });
     }

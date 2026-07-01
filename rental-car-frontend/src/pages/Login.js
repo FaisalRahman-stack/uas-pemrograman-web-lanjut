@@ -1,65 +1,54 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { useRentalStore } from '../store/useRentalStore'; 
 import apiClient from '../api/apiClient';
-import LoginImage from '../assets/UI-assets/LoginRegisImage.png'; 
-import LogoImage from '../assets/UI-assets/LightMode.png'; 
+import LoginImage from '../assets/UI-assets/LoginRegisImage.png';
+import LogoImage from '../assets/UI-assets/LightMode.png';
 
 function Login() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-
+    const [isLoading, setIsLoading] = useState(false);
     const loginStore = useRentalStore((state) => state.login);
 
-    const loginMutation = useMutation({
-        mutationFn: async (credentials) => {
-            const response = await apiClient.post('/auth/login', credentials);
-            return response.data;
-        },
-        onSuccess: (data) => {
+    const handleLoginSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            const response = await apiClient.post('/auth/login', {
+                email: username.trim(),
+                password: password.trim()
+            });
+            
+            const data = response.data;
             const userData = data.data || data.user || data;
             const authToken = data.access_token || data.token || null;
             
-            if (authToken) {
-                localStorage.setItem('access_token', authToken);
-                localStorage.setItem('user_data', JSON.stringify(userData));
+            // Update Zustand store
+            if (authToken && userData) {
+                loginStore(userData, authToken);
             }
 
-            if (userData && !userData.role) {
-                userData.role = {
-                    role_name: userData.role_id === 1 ? 'admin' : 'customer'
-                };
-            }
-
-            loginStore(userData, authToken);
             alert('Login Berhasil!');
-
-            const userRole = userData?.role?.role_name?.toLowerCase() || '';
             
-            if (userRole === 'admin') {
+            // Check role from user data or from user_id (1 = admin)
+            const userRole = userData?.role?.role_name?.toLowerCase() || '';
+            const isAdmin = userRole === 'admin' || userData?.role_id === 1;
+            
+            if (isAdmin) {
                 navigate('/admin/dashboard');
             } else {
                 navigate('/dashboard');
             }
-        },
-        onError: (error) => {
-            const pesanError = error.response?.data?.message || 'Username atau password salah, atau Server mati!';
+        } catch (error) {
+            const pesanError = error.response?.data?.message || 'Username atau password salah!';
             alert(pesanError);
-            console.error("Login Error:", error);
+        } finally {
+            setIsLoading(false);
         }
-    });
-
-    const handleLoginSubmit = (e) => {
-        e.preventDefault();
-        loginMutation.mutate({
-            email: username.trim(),
-            password: password.trim()
-        });
     };
-
-    const isLoading = loginMutation.isPending;
 
     return (
         <div className="flex h-screen w-full bg-white font-sans overflow-hidden">
@@ -126,7 +115,7 @@ function Login() {
 
                     <div className="w-full mt-4 text-left">
                         <p className="text-sm text-gray-900">
-                            Tidak punya akun? <a href="/register" className="cursor-pointer hover:underline font-bold">Daftar disini</a>
+                            Tidak punya akun? <Link to="/register" className="cursor-pointer hover:underline font-bold">Daftar disini</Link>
                         </p>
                     </div>
                     

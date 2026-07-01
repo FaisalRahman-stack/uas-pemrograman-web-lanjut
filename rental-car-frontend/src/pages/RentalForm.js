@@ -6,6 +6,8 @@ import apiClient from '../api/apiClient';
 import { dummyCars, getCarImage } from '../data/dummyCars';
 import Navbar from '../components/Navbar';
 
+const uploadBase = import.meta.env.VITE_UPLOAD_BASE || 'http://127.0.0.1:8000';
+
 const getDeskripsiFungsional = (nama = '', tipe = '') => {
     const lowerNama = nama.toLowerCase();
     const lowerTipe = tipe.toLowerCase();
@@ -48,6 +50,8 @@ function RentalForm() {
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
     const [durasi, setDurasi] = useState(0);
+    const [buktiPembayaran, setBuktiPembayaran] = useState(null);
+    const [rentalId, setRentalId] = useState(null);
 
     const { data: detailCar, isLoading: loadingCar } = useQuery({
         queryKey: ['vehicle_detail', id],
@@ -61,13 +65,16 @@ function RentalForm() {
             const tipeMobil = apiData.tipe || apiData.vehicleType?.type_name || 'Unknown';
             const platNomor = apiData.plate_number || '-';
 
+            // Prioritize uploaded image from database (foto_mobil)
+            const uploadedImage = apiData.foto_mobil ? `${uploadBase}/uploads/foto-mobil/${apiData.foto_mobil}` : null;
+            
             return {
                 id: apiData.id,
                 nama: namaMobil,
                 tipe: tipeMobil,
                 harga: apiData.harga || apiData.price_per_day || 350000,
                 status: apiData.status && apiData.status.toString().toLowerCase() === 'available' ? 'Tersedia' : apiData.status || 'Tidak Tersedia',
-                gambar: getCarImage(namaMobil) || apiData.gambar || dummyCars[0]?.gambar,
+                gambar: uploadedImage || getCarImage(namaMobil) || apiData.gambar || dummyCars[0]?.gambar,
                 spek: getSpesifikasiLengkap(namaMobil, platNomor),
                 Deskripsi: getDeskripsiFungsional(namaMobil, tipeMobil),
             };
@@ -86,7 +93,7 @@ function RentalForm() {
 
     const finalSelectedCar = {
         ...baseCar,
-        gambar: getCarImage(baseCar.nama) || baseCar.gambar || dummyCars[0]?.gambar,
+        gambar: baseCar.gambar || getCarImage(baseCar.nama) || dummyCars[0]?.gambar,
         spek: getSpesifikasiLengkap(baseCar.nama, getPlateFromSpek(baseCar.spek)),
         Deskripsi: getDeskripsiFungsional(baseCar.nama, baseCar.tipe),
     };
@@ -111,31 +118,86 @@ function RentalForm() {
             });
         },
         onSuccess: (data) => {
+            // Ambil data rental yang baru dibuat dari response API
+            const newRental = data.data.data; 
             const namaPenyewa = user ? user.name || user.username : 'Pelanggan';
             
             addTransaction({
-                idTransaksi: `TRX-${new Date().getTime()}`,
+                idTransaksi: newRental.id, // Gunakan ID dari database
                 mobilId: id,
                 penyewa: namaPenyewa,
                 tanggalMulai,
                 tanggalSelesai,
                 durasi,
                 totalBiaya,
-                status: 'Menunggu Pembayaran'
+                status: newRental.status
             });
 
-            alert(`Transaksi Berhasil Disimpan!\nID Mobil: ${id}\nPenyewa: ${namaPenyewa}\nTotal Durasi: ${durasi} Hari\nTotal Bayar: Rp ${totalBiaya.toLocaleString('id-ID')}`);
-            
+            setRentalId(newRental.id);
+            alert(`Pesanan Sewa Berhasil Dibuat!\nID Pesanan: ${newRental.id}\nTotal Bayar: Rp ${totalBiaya.toLocaleString('id-ID')}\n\nSilakan lanjutkan ke pembayaran dan unggah bukti transfer.`);
+
             queryClient.invalidateQueries({ queryKey: ['vehicles_catalog'] });
-            queryClient.invalidateQueries({ queryKey: ['transactions_list'] });
-            
-            navigate('/dashboard'); 
+            queryClient.invalidateQueries({ queryKey: ['rentals'] });
         },
         onError: (error) => {
             console.error("Gagal menyimpan transaksi ke database:", error);
             alert(error.response?.data?.message || 'Gagal terhubung ke server. Pastikan Anda sudah login akun dengan benar!');
         }
     });
+
+    const uploadMutation = useMutation({
+        mutationFn: async (formData) => {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            return await apiClient.post(`/rentals/${rentalId}/upload-proof`, formData, {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+        },
+        onSuccess: () => {
+            alert('Bukti pembayaran berhasil diupload!');
+            setBuktiPembayaran(null);
+            queryClient.invalidateQueries({ queryKey: ['rentals'] });
+        },
+        onError: (error) => {
+            console.error("Gagal upload bukti pembayaran:", error);
+            alert(error.response?.data?.message || 'Gagal upload bukti pembayaran');
+        }
+    });
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validasi tipe file
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Format file tidak didukung. Gunakan .jpg, .jpeg, atau .png');
+                e.target.value = '';
+                return;
+            }
+            // Validasi ukuran file (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Ukuran file terlalu besar. Maksimal 2MB');
+                e.target.value = '';
+                return;
+            }
+            setBuktiPembayaran(file);
+        }
+    };
+
+    const handleUploadBukti = (e) => {
+        e.preventDefault();
+        if (!buktiPembayaran) {
+            alert('Pilih file bukti pembayaran terlebih dahulu');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('bukti_pembayaran', buktiPembayaran);
+
+        uploadMutation.mutate(formData);
+    };
 
     const handleSubmitTransaksi = (e) => {
         e.preventDefault();
@@ -157,11 +219,34 @@ function RentalForm() {
 
     if (loadingCar) {
         return (
-            <div className="flex h-screen w-full items-center justify-center text-gray-500 font-sans">
-                Sedang memuat data kendaraan...
+            <div className="min-h-screen bg-white font-sans flex flex-col">
+                <main className="flex-grow w-full pb-16">
+                    <div className="max-w-5xl mx-auto px-6 pt-12 text-center">
+                        <div className="mx-auto mb-4 h-12 w-2/3 rounded-xl bg-gray-200 animate-pulse" />
+                        <div className="mx-auto mb-10 h-8 w-1/3 rounded-xl bg-gray-200 animate-pulse" />
+                        <div className="flex justify-center mb-12">
+                            <div className="w-full max-w-2xl h-64 rounded-3xl bg-gray-200 animate-pulse" />
+                        </div>
+                    </div>
+                    <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16">
+                        <div className="space-y-6">
+                            <div className="h-6 w-3/4 rounded-xl bg-gray-200 animate-pulse" />
+                            <div className="h-40 rounded-3xl bg-gray-200 animate-pulse" />
+                        </div>
+                        <div className="space-y-4">
+                            <div className="h-6 w-1/2 rounded-xl bg-gray-200 animate-pulse" />
+                            <div className="h-12 rounded-3xl bg-gray-200 animate-pulse" />
+                            <div className="h-12 rounded-3xl bg-gray-200 animate-pulse" />
+                            <div className="h-12 rounded-3xl bg-gray-200 animate-pulse" />
+                        </div>
+                    </div>
+                </main>
             </div>
         );
     }
+
+    const fallbackCarImage = getCarImage(finalSelectedCar.nama) || dummyCars[0]?.gambar || 'https://via.placeholder.com/600x400?text=Mobil';
+    const imageSource = finalSelectedCar.gambar || fallbackCarImage;
 
     return (
         <div className="min-h-screen bg-white font-sans flex flex-col">
@@ -176,9 +261,16 @@ function RentalForm() {
                     </p>
                     <div className="flex justify-center mb-12">
                         <img 
-                            src={finalSelectedCar.gambar} 
+                            src={imageSource} 
                             alt={finalSelectedCar.nama} 
                             className="w-full max-w-2xl h-auto object-contain mix-blend-multiply" 
+                            loading="lazy"
+                            onError={(e) => {
+                                if (e.target.src !== fallbackCarImage) {
+                                    e.target.onerror = null;
+                                    e.target.src = fallbackCarImage;
+                                }
+                            }}
                         />
                     </div>
                 </div>
@@ -230,85 +322,64 @@ function RentalForm() {
                                 <input 
                                     type="date" 
                                     value={tanggalMulai} 
-                                    onChange={(e) => { setTanggalMulai(e.target.value); hitungTotalBiaya(e.target.value, tanggalSelesai); }} 
-                                    required 
-                                    className="w-full border border-black p-2 outline-none focus:ring-1 focus:ring-black transition-shadow"
+                                    onChange={(e) => { setTanggalMulai(e.target.value); hitungTotalBiaya(e.target.value, tanggalSelesai); }}
+                                    className="w-full border border-black p-3"
                                 />
                             </div>
-                            
                             <div>
                                 <label className="block text-gray-900 mb-1">Selesai Sewa:</label>
                                 <input 
                                     type="date" 
                                     value={tanggalSelesai} 
-                                    onChange={(e) => { setTanggalSelesai(e.target.value); hitungTotalBiaya(tanggalMulai, e.target.value); }} 
-                                    required 
-                                    className="w-full border border-black p-2 outline-none focus:ring-1 focus:ring-black transition-shadow"
+                                    onChange={(e) => { setTanggalSelesai(e.target.value); hitungTotalBiaya(tanggalMulai, e.target.value); }}
+                                    className="w-full border border-black p-3"
                                 />
                             </div>
-                            
-                            <div className="pt-2 text-gray-900 space-y-1">
-                                <p>Durasi: {durasi} Hari</p>
-                                <p className="text-lg">Total Biaya: Rp {totalBiaya.toLocaleString('id-ID')}</p>
+                            <div className="border-t border-black pt-4 mt-4">
+                                <p className="text-gray-900">Total Durasi: <span className="font-bold">{durasi} Hari</span></p>
+                                <p className="text-gray-900 text-xl">Total Biaya: <span className="font-bold">Rp {totalBiaya.toLocaleString('id-ID')}</span></p>
                             </div>
-                            
-                            <button 
-                                type="submit" 
-                                disabled={rentMutation.isPending} 
-                                className={`w-full mt-4 py-3 border border-black transition-colors ${
-                                    rentMutation.isPending 
-                                    ? 'bg-gray-200 text-gray-500 cursor-wait' 
-                                    : 'bg-white text-black hover:bg-black hover:text-white'
-                                }`}
-                            >
-                                {rentMutation.isPending ? 'MEMPROSES...' : 'KONFIRMASI PENYEWAAN MOBIL'}
+                            <button type="submit" disabled={rentMutation.isPending || finalSelectedCar.status !== 'Tersedia'} className="w-full bg-black text-white py-4 uppercase tracking-widest font-bold hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                                {rentMutation.isPending ? 'Memproses...' : (finalSelectedCar.status !== 'Tersedia' ? 'Mobil Tidak Tersedia' : 'Konfirmasi Sewa')}
                             </button>
                         </form>
+
+                        {rentalId && (
+                            <div className="mt-8 pt-8 border-t border-gray-300">
+                                <h3 className="text-xl font-bold mb-4 text-gray-900">Upload Bukti Pembayaran</h3>
+                                <p className="text-sm text-gray-700 mb-4">Setelah melakukan transfer, upload bukti pembayaran Anda di sini.</p>
+                                
+                                <form onSubmit={handleUploadBukti} className="space-y-4">
+                                    <div>
+                                        <label className="block text-gray-900 mb-2 font-bold">Pilih File (JPG, JPEG, PNG - Max 2MB):</label>
+                                        <input 
+                                            type="file" 
+                                            accept=".jpg,.jpeg,.png"
+                                            onChange={handleFileChange}
+                                            className="w-full border border-black p-2 bg-white"
+                                        />
+                                        {buktiPembayaran && (
+                                            <p className="text-sm text-green-600 mt-1">File dipilih: {buktiPembayaran.name}</p>
+                                        )}
+                                    </div>
+                                    
+                                    <button 
+                                        type="submit" 
+                                        disabled={uploadMutation.isPending || !buktiPembayaran}
+                                        className={`w-full py-3 uppercase tracking-widest font-bold transition-colors ${
+                                            uploadMutation.isPending || !buktiPembayaran
+                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        {uploadMutation.isPending ? 'Mengupload...' : 'Upload Bukti Pembayaran'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
-
-            
-            <footer className="bg-black text-white pt-16 pb-8">
-                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
-                    <div>
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Rentix Privé</h4>
-                        <p className="text-sm text-gray-400 leading-relaxed">
-                            Koleksi armada terbaru, layanan terpersonalisasi, inspirasi perjalanan premium, dan kabar terkini di Rentix Privé.
-                        </p>
-                    </div>
-                    <div>
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Perusahaan</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Tentang Rentix Privé</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Layanan Premium</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Keberlanjutan</li>
-                        </ul>
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Bantuan & Kontak</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Hubungi Kami</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">FAQ</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Lokasi Cabang</li>
-                        </ul>
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Legalitas</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Syarat & Ketentuan</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Kebijakan Privasi</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Pengaturan Cookie</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div className="border-t border-gray-800 pt-8 px-6 text-center text-xs text-gray-500 space-y-1">
-                    <p>Hak Cipta © 2026 Rentix Privé.</p>
-                    <p>Seluruh hak cipta dilindungi. Situs ini dilindungi oleh reCAPTCHA.</p>
-                    <p>Kebijakan Privasi dan Persyaratan Layanan Google berlaku.</p>
-                </div>
-            </footer>
         </div>
     );
 }

@@ -6,6 +6,8 @@ import apiClient from '../api/apiClient';
 import { dummyCars, getCarImage } from '../data/dummyCars';
 import Navbar from '../components/Navbar'; 
 
+const uploadBase = import.meta.env.VITE_UPLOAD_BASE || 'http://127.0.0.1:8000';
+
 function Dashboard() {
     const navigate = useNavigate();
     const [halamanAktif, setHalamanAktif] = useState(1);
@@ -28,13 +30,16 @@ function Dashboard() {
                 const rawStatus = item.status ? item.status.toString().toLowerCase() : '';
                 const statusMapped = rawStatus === 'available' ? 'Tersedia' : (rawStatus === 'rented' ? 'Dipinjam' : 'Tidak tersedia');
 
+                // Prioritize uploaded image from database (foto_mobil) - use backend URL
+                const uploadedImage = item.foto_mobil ? `${uploadBase}/uploads/foto-mobil/${item.foto_mobil}` : null;
+                
                 return {
                     id: item.id,
                     nama: namaMobil,
                     tipe: tipeMobil,
                     harga: item.harga || item.price_per_day || 0,
                     status: statusMapped,
-                    gambar: getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
+                    gambar: uploadedImage || getCarImage(namaMobil) || item.gambar || 'https://via.placeholder.com/300x180?text=Mobil',
                     spek: item.spek || `Plat: ${item.plate_number || '-'}`,
                 };
             }) : dummyCars;
@@ -87,7 +92,7 @@ function Dashboard() {
                 
                 <div className="mb-6">
                     <p className="text-gray-700 text-sm">
-                        Showing {cars.length > 0 ? indeksPertama + 1 : 0} - {Math.min(indeksTerakhir, cars.length)} of {cars.length} results
+                        Menampilkan {cars.length > 0 ? indeksPertama + 1 : 0} - {Math.min(indeksTerakhir, cars.length)} dari {cars.length} hasil
                     </p>
                 </div>
 
@@ -108,6 +113,17 @@ function Dashboard() {
                                             src={mobil.gambar} 
                                             alt={mobil.nama} 
                                             className="max-h-full max-w-full object-contain mix-blend-multiply" 
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                if (e.target.src.includes('127.0.0.1:8000')) {
+                                                    e.target.src = e.target.src.replace('127.0.0.1:8000', 'localhost:8000');
+                                                } else if (e.target.src.includes('localhost:8000')) {
+                                                    e.target.src = e.target.src.replace('localhost:8000', '127.0.0.1:8000');
+                                                } else {
+                                                    e.target.src = 'https://via.placeholder.com/300x180?text=Mobil+Tidak+Ditemukan';
+                                                }
+                                            }}
                                         />
                                     </div>
                                     
@@ -167,48 +183,6 @@ function Dashboard() {
                     </>
                 )}
             </main>
-
-            
-            <footer className="bg-black text-white pt-16 pb-8">
-                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
-                    <div>
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Rentix Privé</h4>
-                        <p className="text-sm text-gray-400 leading-relaxed">
-                            Koleksi armada terbaru, layanan terpersonalisasi, inspirasi perjalanan premium, dan kabar terkini di Rentix Privé.
-                        </p>
-                    </div>
-                    <div>
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Perusahaan</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Tentang Rentix Privé</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Layanan Premium</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Keberlanjutan</li>
-                        </ul>
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Bantuan & Kontak</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Hubungi Kami</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">FAQ</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Lokasi Cabang</li>
-                        </ul>
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h4 className="font-bold mb-5 tracking-wider uppercase">Legalitas</h4>
-                        <ul className="text-gray-400 text-sm space-y-3">
-                            <li className="hover:text-white cursor-pointer transition-colors">Syarat & Ketentuan</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Kebijakan Privasi</li>
-                            <li className="hover:text-white cursor-pointer transition-colors">Pengaturan Cookie</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div className="border-t border-gray-800 pt-8 px-6 text-center text-xs text-gray-500 space-y-1">
-                    <p>Hak Cipta © 2026 Rentix Privé.</p>
-                    <p>Seluruh hak cipta dilindungi. Situs ini dilindungi oleh reCAPTCHA.</p>
-                    <p>Kebijakan Privasi dan Persyaratan Layanan Google berlaku.</p>
-                </div>
-            </footer>
         </div>
     );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Image2 from '../assets/UI-assets/LandingImage2.png';
 import Image3 from '../assets/UI-assets/LandingImage3.png';
 import Image4 from '../assets/UI-assets/LandingImage4.png';
@@ -9,12 +10,12 @@ const LandingPage = () => {
       <nav className="flex justify-between items-center py-6 px-12 bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="font-bold text-xl tracking-tighter uppercase">Rentix Privé</div>
         <div className="flex gap-8 text-xs uppercase tracking-widest text-gray-600 items-center">
-          <a href="/dashboard" className="hover:text-black transition-colors font-medium">Katalog</a>
-          <a href="#" className="hover:text-black transition-colors font-medium">Layanan</a>
+          <Link to="/dashboard" className="hover:text-black transition-colors font-medium">Katalog</Link>
+          <Link to="#" className="hover:text-black transition-colors font-medium">Layanan</Link>
           <div className="flex gap-2 font-medium">
-            <a href="/login" className="hover:text-black transition-colors">Login</a>
+            <Link to="/login" className="hover:text-black transition-colors">Login</Link>
             <span>|</span>
-            <a href="/register" className="hover:text-black transition-colors">Register</a>
+            <Link to="/register" className="hover:text-black transition-colors">Register</Link>
           </div>
         </div>
       </nav>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import LoginImage from '../assets/UI-assets/LoginRegisImage.png';
 import LogoImage from '../assets/UI-assets/LightMode.png';
@@ -11,40 +10,37 @@ function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const registerMutation = useMutation({
-        mutationFn: async (userData) => {
-            const response = await apiClient.post('/auth/register', userData);
-            return response.data;
-        },
-        onSuccess: () => {
-            alert('Registrasi Berhasil! Silakan masuk dengan akun baru Anda.');
-            navigate('/login');
-        },
-        onError: (error) => {
-            const pesanError = error.response?.data?.message || 'Terjadi kesalahan saat registrasi, pastikan email belum terdaftar!';
-            alert(pesanError);
-            console.error("Register Error:", error);
-        }
-    });
-
-    const handleRegisterSubmit = (e) => {
+    const handleRegisterSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
 
         if (password !== confirmPassword) {
             alert("Kata sandi dan konfirmasi kata sandi tidak cocok!");
+            setIsLoading(false);
             return;
         }
 
-        registerMutation.mutate({
-            name: name.trim(),
-            email: email.trim(),
-            password: password.trim(),
-            password_confirmation: confirmPassword.trim()
-        });
-    };
+        try {
+            const response = await apiClient.post('/auth/register', {
+                name: name.trim(),
+                email: email.trim(),
+                password: password.trim(),
+                password_confirmation: confirmPassword.trim()
+            });
 
-    const isLoading = registerMutation.isPending;
+            // Show success message and redirect to login (root path)
+            window.alert('Registrasi Berhasil! Silakan masuk dengan akun baru Anda.');
+            window.location.href = '/';
+        } catch (error) {
+            const pesanError = error.response?.data?.message || 'Terjadi kesalahan saat registrasi, pastikan email belum terdaftar!';
+            alert(pesanError);
+            console.error("Register Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="flex h-screen w-full bg-white font-sans overflow-hidden">
@@ -58,11 +54,12 @@ function Register() {
 
             <div className="flex-1 flex items-center justify-center p-8 lg:p-24 overflow-y-auto">
                 <div className="w-full max-w-md flex flex-col items-center py-10">
-                    <div className="mb-2">
+                    
+                    <div className="mb-6">
                         <img 
                             src={LogoImage} 
                             alt="Rentix Prive Logo" 
-                            className="h-28 object-contain" 
+                            className="h-20 object-contain" 
                         />
                     </div>
 
@@ -134,7 +131,7 @@ function Register() {
 
                     <div className="w-full mt-4 text-left">
                         <p className="text-sm text-gray-900">
-                            Sudah memiliki akun? <a href="/login" className="cursor-pointer hover:underline font-bold">Masuk disini</a>
+                            Sudah memiliki akun? <Link to="/" className="cursor-pointer hover:underline font-bold">Masuk disini</Link>
                         </p>
                     </div>
                     

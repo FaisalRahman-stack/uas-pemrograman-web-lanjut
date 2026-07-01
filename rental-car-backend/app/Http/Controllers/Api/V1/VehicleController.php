@@ -20,14 +20,33 @@ class VehicleController extends Controller
 
     public function store(Request $request)
     {
+        \Log::info('Store vehicle called', $request->all());
+        \Log::info('Has file:', ['hasFile' => $request->hasFile('foto_mobil')]);
+        
         $request->validate([
             'vehicle_type_id' => 'required|exists:vehicle_types,id',
             'name'            => 'required|string',
             'plate_number'    => 'required|string|unique:vehicles,plate_number',
             'price_per_day'   => 'required|integer',
+            'foto_mobil'      => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+            'kapasitas'       => 'nullable|string',
+            'transmisi'       => 'nullable|string',
+            'bahan_bakar'     => 'nullable|string',
         ]);
 
-        $vehicle = Vehicle::create($request->all());
+        $data = $request->all();
+        \Log::info('Data before create:', $data);
+
+        if ($request->hasFile('foto_mobil')) {
+            $file = $request->file('foto_mobil');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('uploads/foto-mobil'), $filename);
+            $data['foto_mobil'] = $filename;
+            \Log::info('File uploaded:', ['filename' => $filename]);
+        }
+
+        $vehicle = Vehicle::create($data);
+        \Log::info('Vehicle created:', $vehicle->toArray());
 
         return response()->json([
             'success' => true,
@@ -65,7 +84,24 @@ class VehicleController extends Controller
             ], 404);
         }
 
-        $vehicle->update($request->all());
+        $data = $request->all();
+
+        if ($request->hasFile('foto_mobil')) {
+            // Delete old photo if exists
+            if ($vehicle->foto_mobil) {
+                $oldPath = public_path('uploads/foto-mobil/' . $vehicle->foto_mobil);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+            
+            $file = $request->file('foto_mobil');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('uploads/foto-mobil'), $filename);
+            $data['foto_mobil'] = $filename;
+        }
+
+        $vehicle->update($data);
 
         return response()->json([
             'success' => true,

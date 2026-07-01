@@ -1,18 +1,21 @@
+import CarPlaceholder from '../assets/UI-assets/RentImage.png';
+
+const placeholderImage = CarPlaceholder;
 const carImages = {
-    'Toyota Avanza': new URL('../assets/avanza.jpg', import.meta.url).href,
-    'Honda Civic': new URL('../assets/civic.jpg', import.meta.url).href,
-    'Mitsubishi Xpander': new URL('../assets/xpander.jpg', import.meta.url).href,
-    'Toyota Fortuner': new URL('../assets/fortuner.jpg', import.meta.url).href,
-    'Suzuki Ertiga': new URL('../assets/ertiga.jpg', import.meta.url).href,
-    'Honda Brio': new URL('../assets/brio.jpg', import.meta.url).href,
-    'Hatchback': new URL('../assets/hatchback.jpg', import.meta.url).href,
-    'Mitsubishi Pajero': new URL('../assets/pajero.jpg', import.meta.url).href,
-    'Toyota Raize': new URL('../assets/raize.jpg', import.meta.url).href,
-    'Daihatsu Sigra': new URL('../assets/sigra.jpg', import.meta.url).href,
-    'Toyota Zenix': new URL('../assets/zenix.jpg', import.meta.url).href,
+    'Toyota Avanza': placeholderImage,
+    'Honda Civic': placeholderImage,
+    'Mitsubishi Xpander': placeholderImage,
+    'Toyota Fortuner': placeholderImage,
+    'Suzuki Ertiga': placeholderImage,
+    'Honda Brio': placeholderImage,
+    'Hatchback': placeholderImage,
+    'Mitsubishi Pajero': placeholderImage,
+    'Toyota Raize': placeholderImage,
+    'Daihatsu Sigra': placeholderImage,
+    'Toyota Zenix': placeholderImage,
 };
 
-export const getCarImage = (name) => carImages[name] || carImages['Hatchback'];
+export const getCarImage = (name) => carImages[name] || placeholderImage;
 
 export const dummyCars = [
     {
@@ -22,8 +25,11 @@ export const dummyCars = [
         harga: 350000,
         status: 'Tersedia',
         gambar: getCarImage('Toyota Avanza'),
-        spek: 'Plat: B 1234 ABC',
+        spek: 'Plat: B 1234 ABC | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
         Deskripsi: 'Toyota Avanza nyaman untuk keluarga, cocok untuk perjalanan jauh dengan konsumsi bahan bakar efisien.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
     },
     {
         id: 2,
@@ -32,8 +38,11 @@ export const dummyCars = [
         harga: 700000,
         status: 'Tersedia',
         gambar: getCarImage('Honda Civic'),
-        spek: 'Plat: B 9999 XYZ',
+        spek: 'Plat: B 9999 XYZ | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin (Irit)',
         Deskripsi: 'Honda Civic elegan dan sporty, ideal untuk tampilan premium saat perjalanan bisnis.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin (Irit)'
     },
     {
         id: 3,
@@ -42,7 +51,127 @@ export const dummyCars = [
         harga: 450000,
         status: 'Tersedia',
         gambar: getCarImage('Mitsubishi Xpander'),
-        spek: 'Plat: B 2233 ZXC',
+        spek: 'Plat: B 2233 ZXC | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
         Deskripsi: 'Xpander luas dengan kabin nyaman, cocok untuk keluarga besar dan liburan panjang.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 4,
+        nama: 'Toyota Fortuner',
+        tipe: 'SUV',
+        harga: 900000,
+        status: 'Tersedia',
+        gambar: getCarImage('Toyota Fortuner'),
+        spek: 'Plat: B 4444 QWE | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Diesel',
+        Deskripsi: 'Fortuner tangguh dan mewah, cocok untuk petualangan off-road dan perjalanan executive.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Diesel'
+    },
+    {
+        id: 5,
+        nama: 'Suzuki Ertiga',
+        tipe: 'MPV',
+        harga: 450000,
+        status: 'Tersedia',
+        gambar: getCarImage('Suzuki Ertiga'),
+        spek: 'Plat: B 5555 ASD | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Ertiga irit dan spacious, pilihan tepat untuk keluarga dan perjalanan sehari-hari.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 6,
+        nama: 'Honda Brio',
+        tipe: 'Hatchback',
+        harga: 300000,
+        status: 'Tersedia',
+        gambar: getCarImage('Honda Brio'),
+        spek: 'Plat: B 6666 FGH | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin (Irit)',
+        Deskripsi: 'Brio lincah dan irit, sempurna untuk mobilitas urban dan parkir mudah.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin (Irit)'
+    },
+    {
+        id: 7,
+        nama: 'Mitsubishi Pajero',
+        tipe: 'SUV',
+        harga: 950000,
+        status: 'Tersedia',
+        gambar: getCarImage('Mitsubishi Pajero'),
+        spek: 'Plat: B 7777 JKL | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Diesel',
+        Deskripsi: 'Pajero legend, SUV tangguh untuk segala medan dengan kenyamanan premium.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Diesel'
+    },
+    {
+        id: 8,
+        nama: 'Toyota Raize',
+        tipe: 'SUV',
+        harga: 500000,
+        status: 'Tersedia',
+        gambar: getCarImage('Toyota Raize'),
+        spek: 'Plat: B 8888 RTY | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Raize compact dan stylish, SUV kota dengan teknologi modern dan irit bahan bakar.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 9,
+        nama: 'Daihatsu Sigra',
+        tipe: 'MPV',
+        harga: 320000,
+        status: 'Tersedia',
+        gambar: getCarImage('Daihatsu Sigra'),
+        spek: 'Plat: B 9990 UIO | Kapasitas: 7 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Sigra ekonomis dan praktis, pilihan andal untuk keluarga menengah.',
+        kapasitas: '7 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 10,
+        nama: 'Toyota Zenix',
+        tipe: 'Hatchback',
+        harga: 520000,
+        status: 'Tersedia',
+        gambar: getCarImage('Toyota Zenix'),
+        spek: 'Plat: B 1111 PAS | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Zenix modern dan dinamis, hatchback dengan desain futuristik.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 11,
+        nama: 'Hyundai Creta',
+        tipe: 'SUV',
+        harga: 600000,
+        status: 'Tersedia',
+        gambar: getCarImage('Hyundai Creta'),
+        spek: 'Plat: B 2222 QAZ | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Creta stylish dan powerful, SUV dengan fitur canggih dan performa optimal.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
+    },
+    {
+        id: 12,
+        nama: 'Kia Seltos',
+        tipe: 'SUV',
+        harga: 650000,
+        status: 'Tersedia',
+        gambar: getCarImage('Kia Seltos'),
+        spek: 'Plat: B 3333 WSX | Kapasitas: 5 Penumpang | Transmisi: Otomatis | Bahan Bakar: Bensin',
+        Deskripsi: 'Seltos trendi dan bertenaga, SUV kompak dengan teknologi terkini.',
+        kapasitas: '5 Penumpang',
+        transmisi: 'Otomatis',
+        bahanBakar: 'Bensin'
     },
 ];

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRentalStore } from '../../store/useRentalStore';
@@ -11,6 +11,7 @@ function KelolaTransaksi() {
     const navigate = useNavigate();
     const user = useRentalStore((state) => state.user);
     const queryClient = useQueryClient();
+    const [selectedProof, setSelectedProof] = useState(null);
 
     const isAdmin = user?.role_id === 1 || user?.role?.role_name?.toLowerCase() === 'admin';
 
@@ -23,10 +24,7 @@ function KelolaTransaksi() {
     const { data: transactions = [], isLoading: loading, isError: error } = useQuery({
         queryKey: ['transactions_list'],
         queryFn: async () => {
-            const token = localStorage.getItem('access_token');
-            const response = await apiClient.get('/rentals', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await apiClient.get('/rentals');
             const data = response.data.data || response.data;
             return Array.isArray(data) ? data : [];
         },
@@ -35,14 +33,23 @@ function KelolaTransaksi() {
 
     const statusMutation = useMutation({
         mutationFn: async ({ transactionId, newStatus }) => {
-            const token = localStorage.getItem('access_token');
-            return await apiClient.put(`/rentals/${transactionId}`, 
-                { status: newStatus }, 
-                { headers: { Authorization: `Bearer ${token}` } }
+            return await apiClient.patch(`/rentals/${transactionId}/update-status`, 
+                { status: newStatus }
             );
         },
-        onSuccess: () => {
+        onSuccess: (response, variables) => {
             alert('Status transaksi berhasil diperbarui!');
+            const updatedId = variables.transactionId;
+            const updatedStatus = variables.newStatus;
+
+            queryClient.setQueryData(['transactions_list'], (oldData) => {
+                if (!Array.isArray(oldData)) return oldData;
+                return oldData.map((transaction) => {
+                    if (transaction.id !== updatedId) return transaction;
+                    return { ...transaction, status: updatedStatus };
+                });
+            });
+
             queryClient.invalidateQueries({ queryKey: ['transactions_list'] });
         },
         onError: (err) => {
@@ -54,6 +61,8 @@ function KelolaTransaksi() {
     const handleStatusChange = (transactionId, newStatus) => {
         statusMutation.mutate({ transactionId, newStatus });
     };
+
+    const activeTransactions = transactions.filter((transaction) => transaction.status !== 'cancelled');
 
     if (!isAdmin) return null;
 
@@ -71,11 +80,11 @@ function KelolaTransaksi() {
                         {loading && <p className="text-gray-500">Memuat data transaksi...</p>}
                         {error && <p className="text-red-500">Gagal memuat transaksi.</p>}
                         
-                        {!loading && !error && transactions.length === 0 && (
-                            <p className="text-center py-10 text-gray-500">Belum ada transaksi.</p>
+                        {!loading && !error && activeTransactions.length === 0 && (
+                            <p className="text-center py-10 text-gray-500">Belum ada transaksi aktif.</p>
                         )}
 
-                        {!loading && !error && transactions.length > 0 && (
+                        {!loading && !error && activeTransactions.length > 0 && (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
@@ -91,7 +100,7 @@ function KelolaTransaksi() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {transactions.map((transaction) => (
+                                        {activeTransactions.map((transaction) => (
                                             <tr key={transaction.id} className="border-b border-gray-200/50 hover:bg-gray-200/20">
                                                 <td className="py-4 text-sm text-gray-900">#{transaction.id}</td>
                                                 <td className="py-4 text-sm text-gray-900">{transaction.user?.name || transaction.penyewa}</td>
@@ -100,21 +109,39 @@ function KelolaTransaksi() {
                                                 <td className="py-4 text-sm text-gray-900">{transaction.end_date || transaction.tanggal_selesai}</td>
                                                 <td className="py-4 text-sm text-gray-900">Rp {Number(transaction.total_price || transaction.total || 0).toLocaleString('id-ID')}</td>
                                                 <td className="py-4">
-                                                    <span className="px-4 py-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
-                                                        {transaction.status === 'pending' ? 'Aktif' : (transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan')}                                                
+                                                    <span className={`px-4 py-1.5 rounded-full text-xs font-medium ${
+                                                        transaction.status === 'menunggu' ? 'bg-yellow-200 text-yellow-800' :
+                                                        transaction.status === 'disetujui' ? 'bg-green-200 text-green-800' :
+                                                        transaction.status === 'completed' ? 'bg-blue-200 text-blue-800' :
+                                                        'bg-red-200 text-red-800'
+                                                    }`}>
+                                                        {transaction.status === 'menunggu' ? 'Menunggu' : 
+                                                         transaction.status === 'disetujui' ? 'Disetujui' : 
+                                                         transaction.status === 'completed' ? 'Selesai' : 'Dibatalkan'}
                                                     </span>
                                                 </td>
                                                 <td className="py-4 text-center">
-                                                    <select
-                                                        value={transaction.status || 'pending'}
-                                                        onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
-                                                        disabled={statusMutation.isPending}
-                                                        className="border border-gray-300 rounded p-1 text-sm bg-white"
-                                                    >
-                                                        <option value="pending">Aktif</option>
-                                                        <option value="completed">Selesai</option>
-                                                        <option value="cancelled">Tolak</option>
-                                                    </select>
+                                                    <div className="flex flex-col gap-2">
+                                                        <select
+                                                            value={transaction.status || 'menunggu'}
+                                                            onChange={(e) => handleStatusChange(transaction.id, e.target.value)}
+                                                            disabled={statusMutation.isPending}
+                                                            className="border border-gray-300 rounded p-1 text-sm bg-white"
+                                                        >
+                                                            <option value="menunggu">Menunggu</option>
+                                                            <option value="disetujui">Disetujui</option>
+                                                            <option value="completed">Selesai</option>
+                                                            <option value="cancelled">Tolak</option>
+                                                        </select>
+                                                        {transaction.bukti_pembayaran && (
+                                                            <button
+                                                                onClick={() => setSelectedProof(transaction.bukti_pembayaran)}
+                                                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                                                            >
+                                                                Lihat Bukti
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -128,18 +155,49 @@ function KelolaTransaksi() {
                         <div className="grid grid-cols-2 gap-6 mt-8">
                             <div className="bg-[#f4f4f4] rounded-xl p-6">
                                 <p className="font-bold text-black mb-2 text-sm">TOTAL TRANSAKSI</p>
-                                <h3 className="text-4xl font-bold text-black">{transactions.length}</h3>
+                                <h3 className="text-4xl font-bold text-black">{activeTransactions.length}</h3>
                             </div>
                             <div className="bg-[#f4f4f4] rounded-xl p-6">
                                 <p className="font-bold text-black mb-2 text-sm">TOTAL PENDAPATAN (RP)</p>
                                 <h3 className="text-4xl font-bold text-blue-600">
-                                    Rp {Number(transactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)).toLocaleString('id-ID')}
+                                    Rp {Number(activeTransactions.reduce((sum, t) => sum + (t.total_price || t.total || 0), 0)).toLocaleString('id-ID')}
                                 </h3>
                             </div>
                         </div>
                     )}
                 </main>
             </div>
+
+            {/* Modal untuk lihat bukti pembayaran */}
+            {selectedProof && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setSelectedProof(null)}
+                >
+                    <div 
+                        className="bg-white rounded-lg max-w-2xl w-full p-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-black">Bukti Pembayaran</h3>
+                            <button
+                                onClick={() => setSelectedProof(null)}
+                                className="text-gray-500 hover:text-gray-700 text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <img 
+                            src={`http://127.0.0.1:8000/uploads/bukti-pembayaran/${selectedProof}`}
+                            alt="Bukti Pembayaran"
+                            className="w-full h-auto rounded"
+                            onError={(e) => {
+                                e.target.src = 'https://via.placeholder.com/600x400?text=Gambar+Tidak+Ditemukan';
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

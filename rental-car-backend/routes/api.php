@@ -25,8 +25,13 @@ Route::prefix('v1')->group(function () {
         
         // Fitur modifikasi data kendaraan (Hanya boleh diakses admin/user yang login)
         Route::post('/vehicles', [VehicleController::class, 'store']);
-        Route::put('/vehicles/{id}', [VehicleController::class, 'update']);
+        // Menggunakan POST untuk update agar bisa handle file upload (multipart/form-data)
+        Route::post('/vehicles/{id}', [VehicleController::class, 'update']);
         Route::delete('/vehicles/{id}', [VehicleController::class, 'destroy']);
+
+        // Fitur upload bukti bayar dan update status
+        Route::post('/rentals/{rental}/upload-proof', [RentalController::class, 'uploadProof']);
+        Route::patch('/rentals/{rental}/update-status', [RentalController::class, 'updateStatus']);
         
     });
 
