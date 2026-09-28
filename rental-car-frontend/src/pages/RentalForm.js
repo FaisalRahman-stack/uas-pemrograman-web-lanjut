@@ -6,8 +6,7 @@ import apiClient from '../api/apiClient';
 import { dummyCars, getCarImage } from '../data/dummyCars';
 import Navbar from '../components/Navbar';
 
-const uploadBase = import.meta.env.VITE_UPLOAD_BASE || 'http://127.0.0.1:8000';
-
+const uploadBase = import.meta.env.VITE_UPLOAD_BASE || 'https://rentalcardb.vercel.app';
 const getDeskripsiFungsional = (nama = '', tipe = '') => {
     const lowerNama = nama.toLowerCase();
     const lowerTipe = tipe.toLowerCase();
