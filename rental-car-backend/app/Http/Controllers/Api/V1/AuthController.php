@@ -40,34 +40,40 @@ class AuthController extends Controller
     }
 
     public function login(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
+{
+    $request->validate([
+        'email' => 'nullable|email',
+        'username' => 'nullable|string',
+        'password' => 'required|string',
+    ]);
 
-        $user = User::where('email', $request->email)->first();
+    // Cari user berdasarkan input email atau username yang dikirim frontend
+    $identifier = $request->email ?? $request->username;
+    $user = \App\Models\User::where('email', $identifier)
+                ->orWhere('name', $identifier)
+                ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email atau password salah'
-            ], 401);
-        }
-
-        $user->tokens()->delete();
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
+    if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login berhasil, selamat datang ' . $user->name,
-            'data'    => $user,
-            'access_token' => $token,
-            'token_type'   => 'Bearer'
-        ], 200);
+            'status' => 'error',
+            'message' => 'Username atau password salah!'
+        ], 401);
     }
 
+    // Buat token sanctum
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Login berhasil',
+        'data' => [
+            'user' => $user,
+            'token' => $token,
+            'access_token' => $token,
+            'token_type' => 'Bearer'
+        ]
+    ], 200);
+}
     public function logout()
     {
         auth()->user()->currentAccessToken()->delete();
