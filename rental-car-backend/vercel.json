@@ -9,6 +9,10 @@
   },
   "routes": [
     {
+      "src": "/uploads/(.*)",
+      "dest": "/uploads/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.php",
       "headers": {
