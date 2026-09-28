@@ -5,37 +5,32 @@ use App\Http\Controllers\Api\V1\RentalController;
 use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->group(function () {
-    
-    //endpoint public. bisa diakses tanpa login
+$defineRoutes = function () {
+    // Endpoint publik
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
-    
-    //list kendaraan public agar customer bisa lihat
+
     Route::get('/vehicles', [VehicleController::class, 'index']);
     Route::get('/vehicles/{id}', [VehicleController::class, 'show']);
 
-    //endpoint protected, harus login untuk mengakses
+    // Endpoint protected
     Route::middleware('auth:sanctum')->group(function () {
-        
-        // Fitur Logout
         Route::post('/auth/logout', [AuthController::class, 'logout']);
-        
+
         Route::apiResource('rentals', RentalController::class);
-        
-        // Fitur modifikasi data kendaraan (Hanya boleh diakses admin/user yang login)
+
         Route::post('/vehicles', [VehicleController::class, 'store']);
-        // Menggunakan POST untuk update agar bisa handle file upload (multipart/form-data)
         Route::post('/vehicles/{id}', [VehicleController::class, 'update']);
         Route::delete('/vehicles/{id}', [VehicleController::class, 'destroy']);
 
-        // Fitur upload bukti bayar dan update status
         Route::post('/rentals/{rental}/upload-proof', [RentalController::class, 'uploadProof']);
         Route::patch('/rentals/{rental}/update-status', [RentalController::class, 'updateStatus']);
         Route::delete('/rentals/{rental}', [RentalController::class, 'destroy']);
-        
     });
+};
 
+// Rute langsung (menangani request saat path /api atau /v1 terpotong oleh router Vercel)
+$defineRoutes();
 
-    
-});
+// Rute dengan prefix v1 (menangani request utuh /v1/...)
+Route::prefix('v1')->group($defineRoutes);
